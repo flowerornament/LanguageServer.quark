@@ -71,21 +71,25 @@ ExecuteCommandProvider : LSPProvider {
             },
             // Direct eval command - takes raw source code, no document required
             // Used by HTTP eval endpoint in sc_launcher
+            // NOTE: Do NOT use ^ (non-local return) in these command functions.
+            // They are called via valueArray, and ^ would bypass the return value capture.
             'supercollider.eval': {
                 |sourceCode|
-                var result;
+                var result, output;
                 if (sourceCode.isNil || { sourceCode.isEmpty }) {
-                    ^(result: "");
-                };
-                try {
-                    result = sourceCode.interpret;
-                    ("> " ++ result.asString).postln;
-                    ^(result: result.asString);
+                    (result: "")
                 } {
-                    |error|
-                    error.reportError;
-                    ^(error: error.errorString);
-                };
+                    try {
+                        result = sourceCode.interpret;
+                        ("> " ++ result.asString).postln;
+                        output = (result: result.asString);
+                    } {
+                        |error|
+                        error.reportError;
+                        output = (error: error.errorString);
+                    };
+                    output
+                }
             },
             'supercollider.evaluateSelection': {
                 |uri, range|
@@ -95,18 +99,18 @@ ExecuteCommandProvider : LSPProvider {
 
                 if (doc.isNil) {
                     "supercollider.evaluateSelection: document % not found".format(uri).warn;
-                    ^nil;
-                };
+                    nil
+                } {
+                    normalizedRange = LSPDatabase.normalizeRange(range);
+                    source = LSPDatabase.stringForRange(doc, normalizedRange);
 
-                normalizedRange = LSPDatabase.normalizeRange(range);
-                source = LSPDatabase.stringForRange(doc, normalizedRange);
-
-                if (source.isNil) {
-                    "supercollider.evaluateSelection: unable to extract source for range %".format(range).warn;
-                    ^nil;
-                };
-
-                EvaluateProvider.evaluateSource(doc, source);
+                    if (source.isNil) {
+                        "supercollider.evaluateSelection: unable to extract source for range %".format(range).warn;
+                        nil
+                    } {
+                        EvaluateProvider.evaluateSource(doc, source)
+                    }
+                }
             }
         )
     }
