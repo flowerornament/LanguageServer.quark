@@ -6,11 +6,108 @@
 LSPDatabase {
     classvar allMethodNames, allMethods, allClasses, allMethodsByName, methodLocations;
     classvar classSymbols, methodSymbols, allSymbolObjects;
-    
+
     *initClass {
         methodLocations = ();
     }
-    
+
+    *asInteger {
+        |value|
+        if (value.isNil) { ^0 };
+        if (value.respondsTo(\asInteger)) {
+            ^value.asInteger
+        } {
+            ^value
+        }
+    }
+
+    *normalizeRange {
+        |range|
+        var start, end, startLine, startChar, endLine, endChar;
+
+        range.isNil.if { ^nil };
+
+        start = range["start"] ?? range[\start];
+        end = range["end"] ?? range[\end];
+
+        if (start.isNil or: { end.isNil }) {
+            ^nil
+        };
+
+        startLine = this.asInteger(start["line"] ?? start[\line] ?? 0);
+        startChar = this.asInteger(start["character"] ?? start[\character] ?? 0);
+        endLine = this.asInteger(end["line"] ?? end[\line] ?? startLine);
+        endChar = this.asInteger(end["character"] ?? end[\character] ?? startChar);
+
+        ^(
+            start: (
+                line: startLine.max(0),
+                character: startChar.max(0)
+            ),
+            end: (
+                line: endLine.max(0),
+                character: endChar.max(0)
+            )
+        );
+    }
+
+    *rangeIsEmpty {
+        |range|
+        range = this.normalizeRange(range);
+        range.isNil.if { ^true };
+        ^(
+            range[\start][\line] == range[\end][\line]
+            and: { range[\start][\character] == range[\end][\character] }
+        )
+    }
+
+    *absoluteIndexFor {
+        |string, line, character|
+        var index = 0, currentLine = 0, size = string.size;
+
+        while { (currentLine < line) and: { index < size } } {
+            if (string[index] == Char.nl) {
+                currentLine = currentLine + 1;
+            };
+            index = index + 1;
+        };
+
+        ^(index + character).min(size)
+    }
+
+    *stringForRange {
+        |doc, range|
+        var normalized, fullString, startLine, startChar, endLine, endChar, startIndex, endIndex, endInclusive, lineText;
+
+        if (doc.isNil) { ^nil };
+
+        normalized = this.normalizeRange(range);
+        normalized.isNil.if { ^nil };
+
+        fullString = doc.string ?? "";
+        if (fullString.size == 0) { ^"" };
+
+        startLine = normalized[\start][\line];
+        startChar = normalized[\start][\character];
+        endLine = normalized[\end][\line];
+        endChar = normalized[\end][\character];
+
+        // Clamp character positions to line lengths.
+        lineText = this.lineTextAt(doc, startLine);
+        startChar = startChar.min(lineText.size);
+        lineText = this.lineTextAt(doc, endLine);
+        endChar = endChar.min(lineText.size);
+
+        startIndex = this.absoluteIndexFor(fullString, startLine, startChar);
+        endIndex = this.absoluteIndexFor(fullString, endLine, endChar);
+
+        if (endIndex <= startIndex) { ^"" };
+
+        endInclusive = (endIndex - 1).min(fullString.size - 1).max(startIndex - 1);
+
+        ^fullString.copyRange(startIndex, endInclusive)
+    }
+
     *methodSortFunc {
         ^{
             |a, b|
@@ -25,7 +122,7 @@ LSPDatabase {
             }
         }
     }
-    
+
     *rangeForItems {
         |list, function, newObjectA, newObjectB|
         var a, b;
@@ -33,13 +130,13 @@ LSPDatabase {
         b = this.indexForItem(list, function, newObjectB, a);
         ^Range(a, b-a-1);
     }
-    
+
     *indexForItem {
         |list, function, newObject, low=0|
-        
+
         var index;
         var high = list.size-1;
-        
+
         while ({
             index = high + low div: 2;
             low <= high;
@@ -50,10 +147,10 @@ LSPDatabase {
                 high = index - 1;
             });
         });
-        
+
         ^low
     }
-    
+
     *uniqueMethodsForClass {
         |class|
         var methods = class.methods;
@@ -63,11 +160,11 @@ LSPDatabase {
         });
         ^methods;
     }
-    
+
     *methodsForClass {
         |class|
         var result, methodNames = IdentitySet(), methods = [];
-        
+
         (class.superclasses.reverse ++ [class]).reverse.do {
             |class|
             this.uniqueMethodsForClass(class).do {
@@ -78,87 +175,87 @@ LSPDatabase {
                 }
             }
         };
-        
+
         ^[
             methods.collect(_.name),
             methods
         ]
     }
-    
+
     *allMethodNames {
         if (allMethodNames.notNil) { ^allMethodNames };
-        
+
         allMethodNames = this.allMethods.collect(_.name);
         allMethodNames.freeze;
-        
+
         ^allMethodNames;
     }
-    
+
     *allClasses {
         ^allClasses ?? {
             allClasses = Class.allClasses.sort({ |a, b| a.name.asString.toLower < b.name.asString.toLower })
         }
     }
-    
+
     *allMethods {
         if (allMethods.notNil) { ^allMethods };
-        
+
         Class.allClasses.do {
             |class|
             allMethods = allMethods.addAll(LSPDatabase.uniqueMethodsForClass(class));
         };
-        
+
         allMethods = allMethods.sort(this.methodSortFunc);
         allMethods.freeze;
-        
+
         ^allMethods
     }
-    
+
     *allMethodsByName {
         if (allMethodsByName.notNil) { ^allMethodsByName };
-        
+
         allMethodsByName = ();
         this.allMethods.do {
             |method|
             allMethodsByName[method.name] = allMethodsByName[method.name].add(method);
         };
-        
+
         ^allMethodsByName;
     }
-    
+
     *matchMethods {
         |startsWith|
         var range, allMethodNames, endString;
-        
+
         allMethodNames = this.allMethodNames;
-        
+
         if (startsWith.size == 0) {
             ^Range(0, allMethodNames.size)
         };
-        
+
         endString = startsWith.copy;
         endString[endString.size-1] = (endString[endString.size-1].asUnicode + 1).asAscii;
-        
+
         range = this.rangeForItems(
             allMethodNames, { |a, b| a < b },
             startsWith.asSymbol, endString.asSymbol
         );
-        
+
         ^range
     }
-    
+
     *methodsForName {
         |methodName|
         ^this.allMethodsByName[methodName.asSymbol]
     }
-    
+
     *methodArgString {
         |method|
         ^"(%)".format(
             (method.argNames !? _[1..] ?? []).join(", ")
         )
     }
-    
+
     *methodArgDefaultString {
         |method|
         ^"(%)".format(
@@ -171,7 +268,7 @@ LSPDatabase {
             }) ?? []).join(", "),
         )
     }
-    
+
     *methodInsertString {
         |method|
         ^"%(%)${0}".format(
@@ -182,35 +279,35 @@ LSPDatabase {
             }).join(", ")
         )
     }
-    
+
     *methodDocumentationString {
         |method|
     }
-    
+
     *findDefinitions {
         |word|
         var methods, asClass;
-        
+
         if (word.isClassName and: { (asClass = word.asClass).notNil }) {
             ^[this.renderClassLocation(asClass)]
         } {
             methods = this.methodsForName(word);
-            
+
             ^methods.collect {
                 |method|
                 this.renderMethodLocation(method)
             }
         }
     }
-    
+
     *renderMethodRange {
         |method|
         var file = File(method.filenameSymbol.asString, "r");
         var methodFileSource = file.readAllString();
         var lineChar = methodFileSource.charToLineChar(method.charPos);
-        
+
         file.close();
-        
+
         ^(
             start: (
                 line: lineChar[0],
@@ -222,13 +319,13 @@ LSPDatabase {
             )
         )
     }
-    
+
     *renderClassRange {
         |class|
         // Lucky us, these implementations are identical for now.
         ^this.renderMethodRange(class)
     }
-    
+
     *renderMethodLocation {
         |method|
         ^(
@@ -236,7 +333,7 @@ LSPDatabase {
             range: this.renderMethodRange(method)
         )
     }
-    
+
     *renderClassLocation {
         |class|
         ^(
@@ -244,21 +341,21 @@ LSPDatabase {
             range: this.renderClassRange(class)
         )
     }
-    
+
     *makeMethodCompletion {
         |method, sortByClassHierarchy=false|
         var sortText;
-        
+
         method ?? {
-            ^nil  
+            ^nil
         };
-        
+
         if (sortByClassHierarchy) {
             sortText = (9 - method.ownerClass.superclasses.size).asString.zeroPad()
         } {
             sortText = "%:%".format(method.ownerClass.name, method.name)
         };
-        
+
         ^(
             label: method.name.asString,
             labelDetails: (
@@ -285,7 +382,7 @@ LSPDatabase {
             // commitCharacters: 		["("]
         )
     }
-    
+
     *methodDetails {
         |method|
         ^(
@@ -293,7 +390,7 @@ LSPDatabase {
             description: "%:%".format(method.ownerClass.name, method.name)
         )
     }
-    
+
     *methodDocString {
         |method|
         var node, doc, stream, methodType;
@@ -301,7 +398,7 @@ LSPDatabase {
         if (node.isNil) {
             ^""
         };
-        
+
         try {
             stream = CollStream("");
             SCDocHTMLRenderer.renderMethod(stream, node, \genericMethod, method.ownerClass);
@@ -312,16 +409,16 @@ LSPDatabase {
             ^""
         }
     }
-    
+
     *methodSignature {
         |method|
         var args, argDocs, methodDoc;
         args = method.argNames !? _[1..] ?? [];
         // methodDoc = LSPDatabase.methodDocString(method);
-        
+
         ^(
             label: "%:%%".format(
-                method.ownerClass.name, 
+                method.ownerClass.name,
                 method.name,
                 this.methodArgDefaultString(method)
             ),
@@ -336,16 +433,16 @@ LSPDatabase {
             }
         )
     }
-    
+
     *constructorSignature {
         |method|
         var args, argDocs, methodDoc;
         args = method.argNames !? _[1..] ?? [];
         // methodDoc = LSPDatabase.methodDocString(method);
-        
+
         ^(
             label: "%%".format(
-                method.ownerClass.name.asString.replace("Meta_", ""), 
+                method.ownerClass.name.asString.replace("Meta_", ""),
                 this.methodArgDefaultString(method)
             ),
             documentation: (
@@ -359,32 +456,42 @@ LSPDatabase {
             }
         )
     }
-    
+
     *getReferences {
         |word|
         var references = Class.findAllReferences(word.asSymbol);
-        
+
         ^references.collect {
             |method|
             this.renderMethodLocation(method)
         }
     }
-    
+
     *getDefinitionsForWord {
         |word|
         var references = Class.findAllReferences(word.asSymbol);
-        
+
         ^references.collect {
             |method|
             this.renderMethodLocation(method)
         }
     }
-    
+
     *getDocumentLine {
         |doc, line|
         ^doc.getLine(line)
     }
-    
+
+    *lineTextAt {
+        |doc, line|
+        ^try {
+            this.getDocumentLine(doc, line)
+        } {
+            |error|
+            ""
+        }
+    }
+
     *getDocumentWordAt {
         |doc, line, character|
         var lineString = this.getDocumentLine(doc, line);
@@ -394,15 +501,15 @@ LSPDatabase {
             |ch|
             ch !? { ch.isAlphaNum or: { ch == $_ } } ?? { false }
         };
-        
+
         Log('LanguageServer.quark').info("Searching line for a word: '%' at %:%", lineString, line, character);
-        
+
         if (not(isWord.(lineString[start])) and: {
             isWord.(lineString[(start - 1).max(0)])
         }) {
             start = start - 1;
         };
-        
+
         while {
             (start >= 0) and: { isWord.(lineString[start]) }
         } {
@@ -416,7 +523,7 @@ LSPDatabase {
             ^nil
         }
     }
-    
+
     *getDocumentRegions {
         |doc|
         // @TODO Parse properly to account for e.g. comments...
@@ -428,61 +535,61 @@ LSPDatabase {
         var inSymbol = false;
         var inComment = false;
         var inLineComment = false;
-        
+
         lines.do {
             |line, lineNum|
             var start;
             var lastCharacter;
-            
+
             if ((start = line.findRegexp(startRe)).notEmpty) {
                 regionStack = regionStack.add((
                     start: (line: lineNum, character: 0, depth: regionDepth)
                 ));
                 // "starting region at %:% depth %".format(lineNum, 0, regionDepth).postln;
-                
+
                 if (start[2][1].size > 0) {
-                    nameStack = nameStack.add(start[2][1]);                                    
+                    nameStack = nameStack.add(start[2][1]);
                 } {
-                    nameStack = nameStack.add("[block %]".format(regions.size + nameStack.size));                                    
+                    nameStack = nameStack.add("[block %]".format(regions.size + nameStack.size));
                 }
             };
-            
+
             if (regionStack.size > 0) {
                 line.do {
                     |character, i|
                     if (character == $") {
                         inString = inString.not;
                     };
-                    
+
                     if (character == $') {
                         inSymbol = inSymbol.not;
                     };
-                    
+
                     if (inString.not && inSymbol.not && (character == $/) && (lastCharacter == $/)) {
                         // "line % char %, inLineComment".format(lineNum, i).postln;
                         inLineComment = true;
                     };
-                    
+
                     if (inString.not && inSymbol.not && (character == $*) && (lastCharacter == $/)) {
                         inComment = true;
                     };
-                    
+
                     if (inString.not && inSymbol.not && (character == $/) && (lastCharacter == $*)) {
                         inComment = false;
                     };
-                    
+
                     if (inSymbol.not && inString.not && inLineComment.not && inComment.not) {
                         if (character == $() {
                             regionDepth = regionDepth + 1;
                             // "line %, regionDepth: %".format(lineNum, regionDepth).postln;
                         };
-                        
+
                         if (character == $)) {
                             regionDepth = regionDepth - 1;
                             // "line %, regionDepth: %".format(lineNum, regionDepth).postln;
                         };
-                        
-                        if (regionStack.isEmpty.not and:{ regionStack.last[\start][\depth] == regionDepth }) {   
+
+                        if (regionStack.isEmpty.not and:{ regionStack.last[\start][\depth] == regionDepth }) {
                             // "end region at %:% depth %".format(lineNum, i, regionDepth).postln;
                             regionStack.last.put(
                                 \end,
@@ -494,17 +601,17 @@ LSPDatabase {
                             ));
                         }
                     };
-                    
+
                     lastCharacter = character;
                 };
-                
+
                 inLineComment = false;
             };
         };
-        
+
         ^regions
     }
-    
+
     *renderClassWorkspaceSymbol {
         |class|
         ^(
@@ -513,7 +620,7 @@ LSPDatabase {
             location: 	this.renderClassLocation(class)
         )
     }
-    
+
     *renderMethodWorkspaceSymbol {
         |method|
         ^(
@@ -523,7 +630,7 @@ LSPDatabase {
             containerName: method.ownerClass.name
         )
     }
-    
+
     *renderSymbolObject {
         |obj|
         if (obj.isKindOf(Method)) {
@@ -532,7 +639,7 @@ LSPDatabase {
             ^LSPDatabase.renderClassWorkspaceSymbol(obj)
         }
     }
-    
+
     *renderClassNameCompletion {
         |class|
         var name = class.name.asString;
@@ -556,7 +663,7 @@ LSPDatabase {
             insertTextFormat: 		2, // Snippet,
         )
     }
-    
+
     *allSymbolObjects {
         ^allSymbolObjects ?? {
             allSymbolObjects = LSPDatabase.allMethods ++ LSPDatabase.allClasses;
@@ -564,70 +671,70 @@ LSPDatabase {
                 |o|
                 [o.name.asString.toLower, o]
             };
-            
+
             allSymbolObjects.sort {
                 |a, b|
                 a[0] < b[0]
             };
-            
+
             allSymbolObjects = allSymbolObjects.collect(_[1]);
         }
     }
-    
+
     *findClasses {
         |query, limit=20|
         var symbolObjects = LSPDatabase.allClasses;
         var result = Array(limit);
         var index;
-        
+
         index = LSPDatabase.findSymbolStartIndex(query, symbolObjects);
         limit = index + limit;
-        
-        while { index < limit and: { 
+
+        while { index < limit and: {
             symbolObjects[index] !? {
                 |cls|
                 cls.name.asString.beginsWith(query)
-            } ?? false 
+            } ?? false
         }} {
             result = result.add(symbolObjects[index]);
             index = index + 1;
         };
-        
+
         ^result.collect {
             |symbolObj|
             LSPDatabase.renderClassNameCompletion(symbolObj)
         }
     }
-    
+
     *findSymbols {
         |query, limit=20|
         var symbolObjects = LSPDatabase.allSymbolObjects;
         var result = Array(limit);
         var index;
-        
+
         index = LSPDatabase.findSymbolStartIndex(query, symbolObjects);
         limit = index + limit;
-        
+
         query = query.toLower;
         while { index < limit and: { symbolObjects[index].name.asString.toLower.beginsWith(query) }} {
             result = result.add(symbolObjects[index]);
             index = index + 1;
         };
-        
+
         ^result.collect {
             |symbolObj|
             LSPDatabase.renderSymbolObject(symbolObj)
         }
     }
-    
+
     *findSymbolStartIndex {
         |query, all|
         var index;
         var low = 0;
         var high = all.size-1;
-        
+
         query = query.toLower;
-        
+
         while {
             index = high + low div: 2;
             low <= high;
@@ -638,7 +745,7 @@ LSPDatabase {
                 high = index - 1;
             };
         };
-        
+
         ^low
     }
 }
@@ -648,7 +755,7 @@ LSPDatabase {
         |absoluteChar|
         var char = 0, line = 0, lineStartChar = 0;
         absoluteChar = min(absoluteChar, this.size);
-        
+
         while { char < absoluteChar } {
             if (this[char] == Char.nl) {
                 lineStartChar = char + 1;
@@ -656,7 +763,7 @@ LSPDatabase {
             };
             char = char + 1
         };
-        
+
         ^[line, char - lineStartChar]
     }
 }
@@ -667,12 +774,12 @@ LSPDatabase {
         var name = this.name.asString;
         if (owner.isMetaClass) {
             ^SCDoc.getMethodDoc(
-                owner.name.asString.replace("Meta_", ""), 
+                owner.name.asString.replace("Meta_", ""),
                 "*" ++ name
             )
         } {
             ^SCDoc.getMethodDoc(
-                owner.name.asString, 
+                owner.name.asString,
                 "-" ++ name
             )
         };

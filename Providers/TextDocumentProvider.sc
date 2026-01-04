@@ -10,10 +10,10 @@ TextDocumentProvider : LSPProvider {
     }
     *clientCapabilityName { ^"textDocument.synchronization" }
     *serverCapabilityName { ^"textDocumentSync" }
-    
+
     init {
     }
-    
+
     options {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncOptions
         ^(
@@ -22,14 +22,14 @@ TextDocumentProvider : LSPProvider {
             save: true
         )
     }
-    
+
     onReceived {
         |method, params|
         Log('LanguageServer.quark').info("Handling: %", method);
-        
+
         switch(
             method,
-            
+
             'textDocument/didChange', {
                 this.didChange(
                     params["textDocument"]["uri"],
@@ -59,38 +59,45 @@ TextDocumentProvider : LSPProvider {
                 Error("Couldn't handle method: %".format(method)).throw
             }
         );
-        
+
         ^nil
     }
-    
+
     didOpen {
         |uri, languageId, version, text|
+        LSPConnection.connection.prHandleNotification(
+            method: 'window/logMessage',
+            params: (
+                type: 3,
+                message: "TEXTDOCUMENT didOpen % lang=% version=% size=%".format(uri, languageId, version, text.size)
+            )
+        );
         LSPDocument.findByQUuid(uri).initFromLSP(
             languageId,
             version,
             text
         ).isOpen_(true);
     }
-    
+
     didClose {
         |uri|
         LSPDocument.findByQUuid(uri).isOpen_(false)
     }
-    
+
     didSave {
         |uri|
         LSPDocument.findByQUuid(uri).documentWasSaved();
     }
-    
+
     didChange {
         |uri, version, changes|
         var doc = LSPDocument.findByQUuid(uri);
         var range;
-        
+
         if (doc.isOpen.not) {
             Exception("Changing an LSPDocument(%) that is not open - something is wrong...".format(uri)).throw;
         };
-        
+
         changes = changes.collect {
             |change|
             if (change["range"].notNil) {
@@ -106,7 +113,7 @@ TextDocumentProvider : LSPProvider {
                 LSPDocumentChange.wholeDocument(change["text"])
             }
         };
-        
+
         changes.do(doc.applyChange(version, _));
     }
 }

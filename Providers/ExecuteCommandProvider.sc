@@ -5,19 +5,20 @@ ExecuteCommandProvider : LSPProvider {
             "workspace/executeCommand",
         ]
     }
-    *clientCapabilityName { ^"workspace.executeCommand" }
+    // Always register - needed for HTTP eval endpoint which doesn't go through LSP init
+    *clientCapabilityName { ^nil }
     *serverCapabilityName { ^"executeCommandProvider" }
-    
+
     init {
         |clientCapabilities|
     }
-    
+
     options {
         ^(
             commands: this.class.commands.keys.asArray
         )
     }
-    
+
     *commands {
         ^(
             'supercollider.internal.bootServer': {
@@ -25,6 +26,12 @@ ExecuteCommandProvider : LSPProvider {
             },
             'supercollider.internal.rebootServer': {
                 Server.default.reboot;
+            },
+            'supercollider.internal.recompile': {
+                thisProcess.recompile;
+            },
+            'supercollider.internal.quitServer': {
+                Server.default.quit;
             },
             'supercollider.internal.killAllServers': {
                 Server.killAll();
@@ -61,23 +68,67 @@ ExecuteCommandProvider : LSPProvider {
             },
             'supercollider.internal.cmdPeriod': {
                 CmdPeriod.run();
+            },
+            // Direct eval command - takes raw source code, no document required
+            // Used by HTTP eval endpoint in sc_launcher
+            'supercollider.eval': {
+                |sourceCode|
+                var result;
+                if (sourceCode.isNil || { sourceCode.isEmpty }) {
+                    ^(result: "");
+                };
+                try {
+                    result = sourceCode.interpret;
+                    ("> " ++ result.asString).postln;
+                    ^(result: result.asString);
+                } {
+                    |error|
+                    error.reportError;
+                    ^(error: error.errorString);
+                };
+            },
+            'supercollider.evaluateSelection': {
+                |uri, range|
+                var doc, normalizedRange, source;
+
+                doc = LSPDocument.findByQUuid(uri) ?? { LSPDocument.findByQUuid(uri.urlDecode) };
+
+                if (doc.isNil) {
+                    "supercollider.evaluateSelection: document % not found".format(uri).warn;
+                    ^nil;
+                };
+
+                normalizedRange = LSPDatabase.normalizeRange(range);
+                source = LSPDatabase.stringForRange(doc, normalizedRange);
+
+                if (source.isNil) {
+                    "supercollider.evaluateSelection: unable to extract source for range %".format(range).warn;
+                    ^nil;
+                };
+
+                EvaluateProvider.evaluateSource(doc, source);
             }
         )
     }
-    
+
     onReceived {
         |method, params|
-        var command, arguments;
-        
+        var command, arguments, result;
+
         command = params["command"].asSymbol;
         arguments = params["arguments"];
-        
+
         this.class.commands[command] !? {
             |func|
-            func.value();
-            ^nil
+            arguments = arguments ?? { [] };
+            arguments.isArray.not.if {
+                arguments = [arguments];
+            };
+            result = func.valueArray(arguments);
+            ^result
         } ?? {
-            Exception("Command doesn't exist: %".format(command)).throw
+            Exception("Command doesn't exist: %".format(command)).throw;
+            ^nil
         }
     }
 }

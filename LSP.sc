@@ -3,59 +3,59 @@ LSPConnection {
     classvar <providers, <>preprocessor;
     classvar readyMsg = "***LSP READY***";
     classvar <handlerThread;
-    
+
     var <>inPort, <>outPort;
     var socket;
     var messageLengthExpected, messageBuffer;
     var requestId=0;
     var outstandingRequests;
     var <workspaceFolders;
-    
+
     *initClass {
         var settings;
-        
+
         Class.initClassTree(Log);
-        
+
         // Initialization
         providers = ();
-        
+
         // All params objects are passed through preprocessor.
         // This can normalize common param fields.
         // @TODO each LSPProvider should have it's own preprocessor?
         preprocessor = {
             |params|
-            
+
             params !? _["params"] !? _["position"] !? {
                 |position|
                 position["line"] = position["line"].asInteger;
                 position["character"] = position["character"].asInteger;
             }
         };
-        
+
         settings = this.envirSettings();
-        
+
         handlerThread = Routine({
             |f|
             Environment().push;
             inf.do {
-                f = f.value.yield; 
+                f = f.value.yield;
             }
         });
-        
+
         if (settings[\enabled].asBoolean) {
             {
                 connection = LSPConnection().start;
             }.defer(0.0001)
         };
-        
+
         Log('LanguageServer.quark').level = \error;
     }
-    
+
     *new {
         |settings|
         ^super.new.init(this.envirSettings.copy.addAll(settings));
     }
-    
+
     *envirSettings {
         ^(
             enabled: "SCLANG_LSP_ENABLE".getenv().notNil,
@@ -64,16 +64,16 @@ LSPConnection {
             logLevel: "SCLANG_LSP_LOGLEVEL".getenv() ?? { \error } !? _.asSymbol,
         )
     }
-    
+
     init {
         |settings|
         inPort = settings[\inPort];
         outPort = settings[\outPort];
         outstandingRequests = ();
         workspaceFolders = List();
-        
+
         Log('LanguageServer.quark').level = settings[\logLevel].asSymbol;
-        
+
         this.addDependant({
             |server, message, value|
             if (message == \clientOptions) {
@@ -81,41 +81,45 @@ LSPConnection {
             }
         })
     }
-    
+
     *enabled {
         ^this.envirSettings[\enabled]
     }
-    
+
     start {
         // @TODO: What do we do before start / after stop? Errors?
         Log('LanguageServer.quark').info("Starting language server, inPort: % outPort:%", inPort, outPort);
-        
+
         3.do {
             try {
                 socket = socket ?? { NetAddr("127.0.0.1", outPort) };
-                thisProcess.openUDPPort(inPort, \raw);            
+                thisProcess.openUDPPort(inPort, \raw);
             } {
                 Log('LanguageServer.quark').warning("Opening LSP port failed. Probably this is because an old scsynth process is holding onto the port. Killing old servers and trying again...");
                 Server.killAll();
                 0.5.wait();
             };
         };
-        
+
         thisProcess.addRawRecvFunc({
             |msg, time, replyAddr, recvPort|
             this.prOnReceived(time, replyAddr, msg);
         });
-        
+
         // @TODO Is this the only "default" provider we want?
         this.addProvider(InitializeProvider(this, {}));
-        
+
+        // Always register ExecuteCommandProvider for HTTP eval endpoint
+        // (doesn't require LSP initialization handshake)
+        this.addProvider(ExecuteCommandProvider(this, {}));
+
         readyMsg.postln;
     }
-    
+
     stop {
         // @TODO Unregister and close ports?
     }
-    
+
     serverInfo {
         // @TODO What should go here?
         ^(
@@ -123,47 +127,48 @@ LSPConnection {
             "version": "0.1"
         )
     }
-    
+
     addProvider {
         |provider|
         provider.methodNames.do {
             |methodName|
             methodName = methodName.asSymbol;
-            
+
             if (providers[methodName].isNil) {
                 Log('LanguageServer.quark').info("Adding provider for method '%'", methodName);
             } {
                 Log('LanguageServer.quark').warning("Overwriting provider for method '%'", methodName);
             };
-            
+
             providers[methodName] = provider;
         }
     }
-    
+
     request {
         |methodName, params|
         providers[methodName] !? {
-            |provider| 
+            |provider|
+            ["LANGUAGESERVER.QUARK", "dispatch", methodName, params ?? ()].postln;
             ^provider.sendRequest(params)
         } ?? {
             Error("Can't do request, no providers for method '%'".format(methodName)).throw
         }
     }
-    
+
     prOnReceived {
         |time, replyAddr, message|
-        
+
         Log('LanguageServer.quark').info("Message received: %, %, %", time, replyAddr, message);
-        
+
         this.prParseMessage(message) !? this.prHandleMessage(_)
     }
-    
+
     prParseMessage {
         |message|
         var object, found, endOfHeader;
-        
+
         messageBuffer = messageBuffer ++ message;
-        
+
         if (messageLengthExpected.isNil) {
             found = messageBuffer.findRegexp("Content-Length: ([0-9]+)\r\n\r(\n)");
             if (found.size > 0) {
@@ -175,7 +180,7 @@ LSPConnection {
         } {
             Log('LanguageServer.quark').info("Expecting % bytes, received % so far", messageLengthExpected, messageBuffer.size());
         };
-        
+
         if (messageLengthExpected.notNil and: {
             messageLengthExpected <= messageBuffer.size
         }) {
@@ -189,61 +194,62 @@ LSPConnection {
                 "Problem parsing message (%)".format(e).error;
                 e.reportError;
             };
-            
+
             ^object
         } {
             ^nil
         }
     }
-    
+
     prHandleMessage {
         |object|
         var id, method, params, provider, deferredResult;
-        
+
         if (object["result"].notNil) {
             ^this.prHandleResultMessage(object)
         };
-        
+
         id 		= object["id"] !? { |id| "^[0-9]+$".matchRegexp(id).if({ id.asInteger }, { id.asSymbol }) };
         method 	= object["method"].asSymbol;
         params 	= object["params"];
-        
+
         provider = providers[method];
-        
+
         if (provider.isNil) {
             Log('LanguageServer.quark').info("No provider found for method: %", method)
         } {
             Log('LanguageServer.quark').info("Found method provider: %", provider);
-            
+
             // Preprocess param values into a usable state
             try {
                 preprocessor.value(params);
             } { |e|
                 Log('LanguageServer.quark').error(e);
             };
-            
+
             Deferred().using({
                 provider.onReceived(method, params);
             }, AppClock).then({
                 |result|
-                
+
                 if (result == provider) {
                     "Provider % is returning *itself* from onReceived instead of providing an explicit nil or non-nil return value!".format(provider.class).warn;
                 };
-                
+
                 // messages without ids are notifications and don't need a response
                 // (responses without ids cause errors in neovim)
                 id !? { this.prHandleResponse(id, result) }
             }, {
                 |error|
-                // @TODO handle error
+                // Report provider errors as standard LSP log messages instead of
+                // echoing the original client method back (which confuses clients).
                 error.reportError;
                 if (id.isNil) {
                     this.prHandleNotification(
-                        method: method,
+                        method: 'window/logMessage',
                         params: (
-                            error: (code: error.class.identityHash, message:error.what),
-                            methodParams: params
+                            type: 1, // Error
+                            message: "Provider error for %: %".format(method, error.what)
                         ),
                     );
                 } {
@@ -257,14 +263,14 @@ LSPConnection {
             });
         }
     }
-    
+
     prHandleResultMessage {
         |object|
         var id, method, result, provider, deferredResult;
-        
+
         id 		= object["id"] !? { |id| id.asSymbol };
         result 	= object["result"];
-        
+
         if (outstandingRequests[id].notNil) {
             // This is a response to a request of ours, so handle this directly.
             Log('LanguageServer.quark').info("Handling a follow-up request with: %", outstandingRequests[id]);
@@ -274,7 +280,7 @@ LSPConnection {
             "Received a response message from client, but we were not expecting one (id = %)".format(id).error;
         }
     }
-    
+
     prHandleErrorResponse {
         |id, code, message, data|
         var response = (
@@ -285,8 +291,8 @@ LSPConnection {
                 data: data
             )
         );
-        
-        
+
+
         this.prSendMessage(response);
     }
 
@@ -294,18 +300,18 @@ LSPConnection {
         |method, params|
         this.prSendMessage((method:method, params:params))
     }
-    
+
     prHandleResponse {
         |id, result|
-        
+
         var response = (
             id: id,
             result: result ?? { NilResponse() }
         );
-        
+
         this.prSendMessage(response);
     }
-    
+
     prHandleRequest {
         |method, params|
         var response;
@@ -322,11 +328,11 @@ LSPConnection {
         response.debug;
         ^response
     }
-    
+
     prEncodeMessage {
         |dict|
         var message;
-        
+
         try {
             message = dict.toJSON();
         } {
@@ -336,15 +342,15 @@ LSPConnection {
                 e.what.escapeChar($")
             )
         };
-        
+
         message = "Content-Length: %\r\n\r\n%\n".format(
             message.size + 1,
             message
         );
-        
+
         ^message
     }
-    
+
     prSendMessage {
         |dict|
         var maxSize = 6000;
@@ -352,9 +358,9 @@ LSPConnection {
         var packetSize;
         var message = this.prEncodeMessage(dict);
         var messageSize = message.size;
-        
+
         Log('LanguageServer.quark').info("Responding with: %", message);
-        
+
         if (message.size < maxSize) {
             socket.sendRaw(message);
         } {
@@ -364,7 +370,7 @@ LSPConnection {
                 offset = offset + packetSize;
             }
         }
-        
+
     }
 }
 
@@ -374,5 +380,3 @@ NilResponse {
     }
     // Placeholder for nil responses, since nil signifies an empty slot in a dictionary.
 }
-
-
