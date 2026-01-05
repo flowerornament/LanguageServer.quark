@@ -19,7 +19,21 @@ GotoDefinitionProvider : LSPProvider {
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
-        var wordAtCursor = LSPDatabase.getDocumentWordAt(
+        var wordAtCursor;
+
+        // If the doc isn't open yet, try to rehydrate from last didOpen cache.
+        if (doc.isOpen.not or: { doc.string.isNil }) {
+            TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
+                |cached|
+                doc.initFromLSP(
+                    cached["languageId"],
+                    cached["version"].asInteger,
+                    cached["text"]
+                ).isOpen_(true);
+            };
+        };
+
+        wordAtCursor = LSPDatabase.getDocumentWordAt(
             doc,
             params["position"]["line"].asInteger,
             params["position"]["character"].asInteger

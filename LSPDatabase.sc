@@ -290,6 +290,8 @@ LSPDatabase {
         |word|
         var methods, asClass;
 
+        Log('LanguageServer.quark').warning("findDefinitions for word: %", word);
+
         if (word.isClassName and: { (asClass = word.asClass).notNil }) {
             ^[this.renderClassLocation(asClass)]
         } {
@@ -496,15 +498,42 @@ LSPDatabase {
 
     *getDocumentWordAt {
         |doc, line, character|
-        var lineString = this.getDocumentLine(doc, line);
-        var start = character;
-        var word;
-        var isWord = {
+        var lineString, start = character, word, isWord;
+
+        if (doc.string.isNil) {
+            Log('LanguageServer.quark').warning(
+                "Word lookup skipped: doc string is nil for % (line=% char=%)",
+                doc.quuid,
+                line,
+                character
+            );
+            ^nil
+        };
+
+        if (doc.isOpen.not) {
+            Log('LanguageServer.quark').warning(
+                "Word lookup: doc not open for % (line=% char=% size=%)",
+                doc.quuid,
+                line,
+                character,
+                doc.string !? _.size ?? { "nil" }
+            );
+        };
+
+        lineString = this.getDocumentLine(doc, line);
+        isWord = {
             |ch|
             ch !? { ch.isAlphaNum or: { ch == $_ } } ?? { false }
         };
 
-        Log('LanguageServer.quark').info("Searching line for a word: '%' at %:%", lineString, line, character);
+        Log('LanguageServer.quark').warning(
+            "Word lookup: docOpen=% line=% char=% docSize=% lineSize=%",
+            doc.isOpen,
+            line,
+            character,
+            doc.string !? _.size ?? { "nil" },
+            lineString.size
+        );
 
         if (not(isWord.(lineString[start])) and: {
             isWord.(lineString[(start - 1).max(0)])

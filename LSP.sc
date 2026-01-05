@@ -48,7 +48,7 @@ LSPConnection {
             }.defer(0.0001)
         };
 
-        Log('LanguageServer.quark').level = \error;
+        Log('LanguageServer.quark').level = \warning;
     }
 
     *new {
@@ -61,7 +61,7 @@ LSPConnection {
             enabled: "SCLANG_LSP_ENABLE".getenv().notNil,
             inPort: "SCLANG_LSP_CLIENTPORT".getenv() ?? { 57210 } !? _.asInteger,
             outPort: "SCLANG_LSP_SERVERPORT".getenv() ?? { 57211 } !? _.asInteger,
-            logLevel: "SCLANG_LSP_LOGLEVEL".getenv() ?? { \error } !? _.asSymbol,
+            logLevel: "SCLANG_LSP_LOGLEVEL".getenv() ?? { \info } !? _.asSymbol,
         )
     }
 
@@ -216,7 +216,12 @@ LSPConnection {
         provider = providers[method];
 
         if (provider.isNil) {
-            Log('LanguageServer.quark').info("No provider found for method: %", method)
+            Log('LanguageServer.quark').info("No provider found for method: %", method);
+
+            // Early didOpen/didChange can arrive before TextDocumentProvider registers; queue them.
+            if ((method.asString == "textDocument/didOpen") || (method.asString == "textDocument/didChange")) {
+                TextDocumentProvider.queuePending(method.asString, params);
+            };
         } {
             Log('LanguageServer.quark').info("Found method provider: %", provider);
 

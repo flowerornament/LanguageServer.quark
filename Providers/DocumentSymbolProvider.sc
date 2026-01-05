@@ -20,6 +20,17 @@ DocumentSymbolProvider : LSPProvider {
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
+
+        if (doc.isOpen.not or: { doc.string.isNil }) {
+            TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
+                |cached|
+                doc.initFromLSP(
+                    cached["languageId"],
+                    cached["version"].asInteger,
+                    cached["text"]
+                ).isOpen_(true);
+            };
+        };
         
         if (params["textDocument"]["uri"].endsWith(".sc")) {
             ^nil

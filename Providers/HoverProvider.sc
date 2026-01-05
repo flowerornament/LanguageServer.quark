@@ -1,27 +1,19 @@
-// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_implementation
-FindReferencesProvider : LSPProvider {
-    *methodNames {
-        ^[
-            "textDocument/references",
-        ]
-    }
-    *clientCapabilityName { ^"textDocument.references" }
-    *serverCapabilityName { ^"referencesProvider" }
+// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover
+HoverProvider : LSPProvider {
+    *methodNames { ^["textDocument/hover"] }
+    *clientCapabilityName { ^"textDocument.hover" }
+    *serverCapabilityName { ^"hoverProvider" }
 
-    init {
-        |clientCapabilities|
-    }
+    init { |clientCapabilities| }
 
-    options {
-        ^true
-    }
+    options { ^true }
 
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
         var wordAtCursor;
 
-        // If the doc isn't open yet, try to rehydrate from last didOpen cache.
+        // Rehydrate if not open.
         if (doc.isOpen.not or: { doc.string.isNil }) {
             TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
                 |cached|
@@ -39,8 +31,15 @@ FindReferencesProvider : LSPProvider {
             params["position"]["character"].asInteger
         );
 
-        Log('LanguageServer.quark').info("Found word at cursor: %", wordAtCursor);
+        Log('LanguageServer.quark').info("Hover word: %", wordAtCursor);
 
-        ^(wordAtCursor !? { LSPDatabase.getReferences(wordAtCursor) } ?? {[]})
+        ^(wordAtCursor !? {
+            (
+                contents: [(
+                    language: "supercollider",
+                    value: wordAtCursor.asString
+                )]
+            )
+        })
     }
 }

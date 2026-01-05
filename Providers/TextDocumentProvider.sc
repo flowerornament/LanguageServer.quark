@@ -1,5 +1,7 @@
 // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize
 TextDocumentProvider : LSPProvider {
+    classvar <>pendingOpens, <>pendingChanges, <>initialized=false;
+    classvar <>lastOpenByUri;
     *methodNames {
         ^[
             "textDocument/didOpen",
@@ -12,6 +14,42 @@ TextDocumentProvider : LSPProvider {
     *serverCapabilityName { ^"textDocumentSync" }
 
     init {
+        |clientCapabilities|
+        // No superclass init (LSPFeature:init is subclassResponsibility)
+        ^this
+    }
+
+    *initClass {
+        super.initClass;
+        pendingOpens = Array.new;
+        pendingChanges = Array.new;
+        initialized = false;
+        lastOpenByUri = ();
+    }
+
+    *queuePending {
+        |method, params|
+        // Stash didOpen/didChange that arrive before the provider is registered.
+        pendingOpens = pendingOpens ?? { Array.new };
+        pendingChanges = pendingChanges ?? { Array.new };
+
+        method = method.asString;
+
+        if (method == "textDocument/didOpen") {
+            pendingOpens = pendingOpens.add(params);
+            // Cache latest text per URI for fallback rehydrate.
+            lastOpenByUri[params["textDocument"]["uri"]] = params["textDocument"];
+        } {
+            if (method == "textDocument/didChange") {
+                pendingChanges = pendingChanges.add(params);
+            }
+        };
+        Log('LanguageServer.quark').warning(
+            "Queued pending % (opens=% changes=%)",
+            method,
+            pendingOpens.size,
+            pendingChanges.size
+        );
     }
 
     options {
@@ -26,6 +64,17 @@ TextDocumentProvider : LSPProvider {
     onReceived {
         |method, params|
         Log('LanguageServer.quark').info("Handling: %", method);
+
+        // If initialization hasn't completed yet, queue didOpen/didChange.
+        if (initialized.not and: { ["textDocument/didOpen", "textDocument/didChange"].includes(method) }) {
+            Log('LanguageServer.quark').warning("Queuing % until server is initialized", method);
+            if (method == 'textDocument/didOpen') {
+                pendingOpens = pendingOpens.add(params);
+            } {
+                pendingChanges = pendingChanges.add(params);
+            };
+            ^nil
+        };
 
         switch(
             method,
@@ -65,6 +114,13 @@ TextDocumentProvider : LSPProvider {
 
     didOpen {
         |uri, languageId, version, text|
+        Log('LanguageServer.quark').warning("didOpen % version=% size=%", uri, version, text.size);
+        lastOpenByUri[uri] = (
+            uri: uri,
+            languageId: languageId,
+            version: version,
+            text: text
+        );
         LSPConnection.connection.prHandleNotification(
             method: 'window/logMessage',
             params: (
@@ -93,6 +149,7 @@ TextDocumentProvider : LSPProvider {
         |uri, version, changes|
         var doc = LSPDocument.findByQUuid(uri);
         var range;
+        Log('LanguageServer.quark').warning("didChange % version=% changes=%", uri, version, changes.size);
 
         // Handle race condition where didChange arrives before didOpen is processed
         if (doc.isOpen.not) {
@@ -117,5 +174,32 @@ TextDocumentProvider : LSPProvider {
         };
 
         changes.do(doc.applyChange(version, _));
+    }
+
+    *processPending {
+        Log('LanguageServer.quark').warning("Processing % pending didOpen and % pending didChange messages", pendingOpens.size, pendingChanges.size);
+        initialized = true;
+
+        pendingOpens.do {
+            |params|
+            this.new().didOpen(
+                uri:        params["textDocument"]["uri"],
+                languageId: params["textDocument"]["languageId"],
+                version:    params["textDocument"]["version"].asInteger,
+                text:       params["textDocument"]["text"],
+            );
+        };
+
+        pendingChanges.do {
+            |params|
+            this.new().didChange(
+                params["textDocument"]["uri"],
+                params["textDocument"]["version"],
+                params["contentChanges"]
+            );
+        };
+
+        pendingOpens = Array.new;
+        pendingChanges = Array.new;
     }
 }

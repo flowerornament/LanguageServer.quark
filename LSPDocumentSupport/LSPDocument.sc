@@ -31,6 +31,7 @@ LSPDocument : Document {
     
     *initClass{
         asyncActions = IdentityDictionary.new;
+        allDocuments = Array.new; // ensure document registry is initialized
         Document.tryPerform(\implementingClass_, LSPDocument);
     }
     
@@ -90,7 +91,9 @@ LSPDocument : Document {
     
     *findByQUuid {
         |quuid|
-        var found = allDocuments.detect({|doc| doc.quuid == quuid });
+        var found;
+        allDocuments = allDocuments ?? { Array.new };
+        found = allDocuments.detect({|doc| doc.quuid == quuid });
         
         ^found ?? {
             found = LSPDocument(quuid);
@@ -191,12 +194,12 @@ LSPDocument : Document {
     
     initFromLSP {
         |inLanguageId, inVersion, inText|
-        Log('LanguageServer.quark').info("Creating LSP document % [size=%]", quuid, inText.size);
+        Log('LanguageServer.quark').info("Creating LSP document % lang=% version=% size=%", quuid, inLanguageId, inVersion, inText.size);
         
         title = this.path !? { |p| PathName(p).fileNameWithoutExtension } ?? { "unknown" };
         isEdited = false;
         
-        languageId = languageId;
+        languageId = inLanguageId;
         version = inVersion;
         string = inText;
         
@@ -444,6 +447,7 @@ LSPDocument : Document {
     }
     
     prAdd {
+        allDocuments = allDocuments ?? { Array.new };
         allDocuments = allDocuments.add(this);
         // if (autoRun) {
         // 	if (this.rangeText(0,7) == "/*RUN*/")

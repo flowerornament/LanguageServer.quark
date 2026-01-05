@@ -106,6 +106,9 @@ InitializeProvider : LSPProvider {
         this.addProviders(initializeParams["capabilities"], serverCapabilities);
         Log('LanguageServer.quark').info("Server capabilities are: %", serverCapabilities);
 
+        // After providers are registered, let TextDocumentProvider process any queued opens/changes
+        TextDocumentProvider.processPending();
+
         { this.class.prDoOnInitialize(initializationOptions) }.defer(0.0000001);
 
         ^(
