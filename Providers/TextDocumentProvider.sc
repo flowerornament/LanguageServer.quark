@@ -94,8 +94,10 @@ TextDocumentProvider : LSPProvider {
         var doc = LSPDocument.findByQUuid(uri);
         var range;
 
+        // Handle race condition where didChange arrives before didOpen is processed
         if (doc.isOpen.not) {
-            Exception("Changing an LSPDocument(%) that is not open - something is wrong...".format(uri)).throw;
+            Log('LanguageServer.quark').warning("Document % received change before open, forcing open", uri);
+            doc.isOpen_(true);
         };
 
         changes = changes.collect {

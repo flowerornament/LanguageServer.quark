@@ -200,6 +200,7 @@ LSPDatabase {
     *allMethods {
         if (allMethods.notNil) { ^allMethods };
 
+        allMethods = Array.new;  // Initialize to empty array to avoid addAll on nil
         Class.allClasses.do {
             |class|
             allMethods = allMethods.addAll(LSPDatabase.uniqueMethodsForClass(class));
@@ -217,7 +218,8 @@ LSPDatabase {
         allMethodsByName = ();
         this.allMethods.do {
             |method|
-            allMethodsByName[method.name] = allMethodsByName[method.name].add(method);
+            // Use ?? to provide empty array if key doesn't exist, avoiding .add on nil
+            allMethodsByName[method.name] = (allMethodsByName[method.name] ?? { Array.new }).add(method);
         };
 
         ^allMethodsByName;
