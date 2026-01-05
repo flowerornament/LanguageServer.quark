@@ -7,15 +7,15 @@ GotoImplementationProvider : LSPProvider {
     }
     *clientCapabilityName { ^"textDocument.implementation" }
     *serverCapabilityName { ^"implementationProvider" }
-    
+
     init {
         |clientCapabilities|
     }
-    
+
     options {
-        ^()
+        ^true
     }
-    
+
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
@@ -24,10 +24,10 @@ GotoImplementationProvider : LSPProvider {
             params["position"]["line"].asInteger,
             params["position"]["character"].asInteger
         );
-                
+
         ^(wordAtCursor !? { this.getDefinitionsForWord(wordAtCursor) })
     }
-    
+
     getDefinitionsForWord {
         |word|
         ^LSPDatabase.findDefinitions(word.asSymbol)

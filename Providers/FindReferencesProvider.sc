@@ -7,15 +7,15 @@ FindReferencesProvider : LSPProvider {
     }
     *clientCapabilityName { ^"textDocument.references" }
     *serverCapabilityName { ^"referencesProvider" }
-    
+
     init {
         |clientCapabilities|
     }
-    
+
     options {
-        ^()
+        ^true
     }
-    
+
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
@@ -26,7 +26,7 @@ FindReferencesProvider : LSPProvider {
         );
 
         Log('LanguageServer.quark').info("Found word at cursor: %", wordAtCursor);
-        
+
         ^(wordAtCursor !? { LSPDatabase.getReferences(wordAtCursor) } ?? {[]})
     }
 }
