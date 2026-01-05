@@ -94,6 +94,7 @@ TextDocumentTypeFormattingProvider : LSPProvider {
         }
         
         options {
+            if (TextDocumentFormattingProvider.formatterEnabled.not) { ^nil };
             ^(
                 firstTriggerCharacter: "\n",
                 moreTriggerCharacter: [

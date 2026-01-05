@@ -13,18 +13,20 @@ DocumentSymbolProvider : LSPProvider {
     }
     
     options {
-        ^(
-        )
+        ^nil
     }
     
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
         var uri = params["textDocument"]["uri"];
+        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
 
-        ("DOCSYMS DEBUG uri=% open=% hasString=%"
-            .format(uri, doc.isOpen, doc.string.notNil)
-        ).postln;
+        if (debug) {
+            ("DOCSYMS DEBUG uri=% open=% hasString=%"
+                .format(uri, doc.isOpen, doc.string.notNil)
+            ).postln;
+        };
 
         if (doc.isOpen.not or: { doc.string.isNil }) {
             TextDocumentProvider.lastOpenByUri[uri] !? {
@@ -43,7 +45,7 @@ DocumentSymbolProvider : LSPProvider {
         } {
             if (uri.endsWith(".scd")) {
                 var regions = LSPDatabase.getDocumentRegions(doc);
-                ("DOCSYMS DEBUG regions=%".format(regions.size)).postln;
+                if (debug) { ("DOCSYMS DEBUG regions=%".format(regions.size)).postln; };
                 ^regions.collect {
                     |region|
                     (

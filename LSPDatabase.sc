@@ -306,11 +306,22 @@ LSPDatabase {
 
     *renderMethodRange {
         |method|
-        var file = File(method.filenameSymbol.asString, "r");
-        var methodFileSource = file.readAllString();
-        var lineChar = methodFileSource.charToLineChar(method.charPos);
+        var lineChar;
 
-        file.close();
+        try {
+            File.use(
+                method.filenameSymbol.asString,
+                "r",
+                { |file|
+                    var methodFileSource = file.readAllString();
+                    lineChar = methodFileSource.charToLineChar(method.charPos);
+                }
+            );
+        } { |error|
+            error.reportError;
+        };
+
+        lineChar = lineChar ?? { [0, 0] };
 
         ^(
             start: (

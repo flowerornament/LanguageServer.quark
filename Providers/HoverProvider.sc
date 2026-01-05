@@ -15,10 +15,13 @@ HoverProvider : LSPProvider {
         var line = params["position"]["line"].asInteger;
         var character = params["position"]["character"].asInteger;
         var classDoc;
+        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
 
-        ("HOVER DEBUG uri=% line=% char=% open=% hasString=%"
-            .format(params["textDocument"]["uri"], line, character, doc.isOpen, doc.string.notNil)
-        ).postln;
+        if (debug) {
+            ("HOVER DEBUG uri=% line=% char=% open=% hasString=%"
+                .format(params["textDocument"]["uri"], line, character, doc.isOpen, doc.string.notNil)
+            ).postln;
+        };
 
         // Rehydrate if not open.
         if (doc.isOpen.not or: { doc.string.isNil }) {
@@ -38,9 +41,11 @@ HoverProvider : LSPProvider {
             character
         );
 
-        ("HOVER DEBUG word=% open=% size=%"
-            .format(wordAtCursor, doc.isOpen, doc.string !? _.size ?? { "nil" })
-        ).postln;
+        if (debug) {
+            ("HOVER DEBUG word=% open=% size=%"
+                .format(wordAtCursor, doc.isOpen, doc.string !? _.size ?? { "nil" })
+            ).postln;
+        };
 
         // Try to show a short doc comment from the class file if available.
         classDoc = wordAtCursor !? {
