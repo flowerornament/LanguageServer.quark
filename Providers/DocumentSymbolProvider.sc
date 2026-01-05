@@ -20,9 +20,14 @@ DocumentSymbolProvider : LSPProvider {
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
+        var uri = params["textDocument"]["uri"];
+
+        ("DOCSYMS DEBUG uri=% open=% hasString=%"
+            .format(uri, doc.isOpen, doc.string.notNil)
+        ).postln;
 
         if (doc.isOpen.not or: { doc.string.isNil }) {
-            TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
+            TextDocumentProvider.lastOpenByUri[uri] !? {
                 |cached|
                 doc.initFromLSP(
                     cached["languageId"],
@@ -32,11 +37,14 @@ DocumentSymbolProvider : LSPProvider {
             };
         };
         
-        if (params["textDocument"]["uri"].endsWith(".sc")) {
+        if (uri.endsWith(".sc")) {
+            Log('LanguageServer.quark').warning("DocumentSymbol: skipping .sc file");
             ^nil
         } {
-            if (params["textDocument"]["uri"].endsWith(".scd")) {
-                ^LSPDatabase.getDocumentRegions(doc).collect {
+            if (uri.endsWith(".scd")) {
+                var regions = LSPDatabase.getDocumentRegions(doc);
+                ("DOCSYMS DEBUG regions=%".format(regions.size)).postln;
+                ^regions.collect {
                     |region|
                     (
                         name: region[\text],
