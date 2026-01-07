@@ -58,7 +58,7 @@ FindReferencesProvider : LSPProvider {
             var refs = LSPDatabase.getReferences(wordAtCursor) ?? { Array.new };
             var defs = Array.new;
             var cls, declLoc;
-            var includeDecl = params["context"] !? _["includeDeclaration"] !? _.asBoolean ?? { false };
+            var includeDecl = (params["context"] !? _["includeDeclaration"]) == true;
 
             if (debug) {
                 ("REFS DEBUG returning % refs for % (includeDecl=% params=%)"
