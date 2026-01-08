@@ -49,7 +49,7 @@ LSPConnection {
             }.defer(0.0001)
         };
 
-        Log('LanguageServer.quark').level = \warning;
+        Log('LanguageServer.quark').level = this.envirSettings[\logLevel];
     }
 
     *new {
@@ -78,7 +78,7 @@ LSPConnection {
         this.addDependant({
             |server, message, value|
             if (message == \clientOptions) {
-                Log('LanguageServer.quark').level = value['languageServerLogLevel'] !? _.asSymbol ?? { \error };
+                Log('LanguageServer.quark').level = value['languageServerLogLevel'] !? _.asSymbol ?? { this.class.envirSettings[\logLevel] };
             }
         })
     }
