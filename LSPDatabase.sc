@@ -7,12 +7,25 @@ LSPDatabase {
     classvar allMethodNames, allMethods, allClasses, allMethodsByName, methodLocations;
     classvar classSymbols, methodSymbols, allSymbolObjects;
     classvar classDocCache, classFileCache;
+    classvar lookupCache;
 
     *initClass {
         methodLocations = ();
         classDocCache = ();
         classFileCache = ();
+        lookupCache = LRUCache.new(64);
     }
+
+    *prCachedLookup { |prefix, word, computeFunc|
+        var key = (prefix ++ ":" ++ word.asString).asSymbol;
+        var cached = lookupCache.at(key);
+        if (cached.notNil) { ^cached };
+        cached = computeFunc.value;
+        lookupCache.put(key, cached);
+        ^cached
+    }
+
+    *cacheStats { ^lookupCache.stats }
 
     *asInteger {
         |value|
@@ -398,20 +411,22 @@ LSPDatabase {
 
     *findDefinitions {
         |word|
-        var methods, asClass;
+        ^this.prCachedLookup("defs", word, {
+            var methods, asClass;
 
-        Log('LanguageServer.quark').warning("findDefinitions for word: %", word);
+            Log('LanguageServer.quark').warning("findDefinitions for word: %", word);
 
-        if (word.isClassName and: { (asClass = word.asClass).notNil }) {
-            ^[this.renderClassLocation(asClass)]
-        } {
-            methods = this.methodsForName(word);
+            if (word.isClassName and: { (asClass = word.asClass).notNil }) {
+                [this.renderClassLocation(asClass)]
+            } {
+                methods = this.methodsForName(word);
 
-            ^methods.collect {
-                |method|
-                this.renderMethodLocation(method)
+                methods.collect {
+                    |method|
+                    this.renderMethodLocation(method)
+                }
             }
-        }
+        })
     }
 
     *renderMethodRange {
@@ -584,12 +599,14 @@ LSPDatabase {
 
     *getReferences {
         |word|
-        var references = Class.findAllReferences(word.asSymbol);
+        ^this.prCachedLookup("refs", word, {
+            var references = Class.findAllReferences(word.asSymbol);
 
-        ^references.collect {
-            |method|
-            this.renderMethodLocation(method)
-        }
+            references.collect {
+                |method|
+                this.renderMethodLocation(method)
+            }
+        })
     }
 
     *getDefinitionsForWord {
