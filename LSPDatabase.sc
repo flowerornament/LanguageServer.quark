@@ -7,18 +7,32 @@ LSPDatabase {
     classvar allMethodNames, allMethods, allClasses, allMethodsByName, methodLocations;
     classvar classSymbols, methodSymbols, allSymbolObjects;
     classvar classDocCache, classFileCache;
-    classvar lookupCache;
+    classvar lookupCache, lookupCount;
 
     *initClass {
         methodLocations = ();
         classDocCache = ();
         classFileCache = ();
         lookupCache = LRUCache.new(64);
+        lookupCount = 0;
     }
 
     *prCachedLookup { |prefix, word, computeFunc|
         var key = (prefix ++ ":" ++ word.asString).asSymbol;
         var cached = lookupCache.at(key);
+        var stats;
+
+        lookupCount = lookupCount + 1;
+
+        // Log cache stats every 100 lookups at debug level
+        if ((lookupCount % 100) == 0) {
+            stats = lookupCache.stats;
+            Log('LanguageServer.quark').debug(
+                "[cache] lookups=% size=% hits=% misses=% hitRate=%.1f%%",
+                lookupCount, stats[\size], stats[\hits], stats[\misses], stats[\hitRate] * 100
+            );
+        };
+
         if (cached.notNil) { ^cached };
         cached = computeFunc.value;
         lookupCache.put(key, cached);

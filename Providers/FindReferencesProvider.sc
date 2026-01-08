@@ -19,10 +19,12 @@ FindReferencesProvider : LSPProvider {
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
-        var wordAtCursor;
+        var wordAtCursor, startTime, result, elapsedMs;
         var line = params["position"]["line"].asInteger;
         var character = params["position"]["character"].asInteger;
         var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
+
+        startTime = Main.elapsedTime;
 
         if (debug) {
             ("REFS DEBUG uri=% line=% char=% open=% hasString=%"
@@ -54,7 +56,7 @@ FindReferencesProvider : LSPProvider {
             ).postln;
         };
 
-        ^(wordAtCursor !? {
+        result = wordAtCursor !? {
             var refs = LSPDatabase.getReferences(wordAtCursor) ?? { Array.new };
             var defs = Array.new;
             var cls, declLoc;
@@ -79,11 +81,16 @@ FindReferencesProvider : LSPProvider {
                     };
                 };
 
-                ^defs
-            };
+                defs
+            } {
+                refs
+            }
+        } ?? {[]};
 
-            refs
-        } ?? {[]})
+        elapsedMs = (Main.elapsedTime - startTime) * 1000;
+        Log('LanguageServer.quark').debug("[timing] references lookup: %.2fms", elapsedMs);
+
+        ^result
     }
 
     // Returns a range covering the first block comment in the class file (or line 0 if none).

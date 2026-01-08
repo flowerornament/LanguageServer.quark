@@ -19,7 +19,9 @@ GotoDefinitionProvider : LSPProvider {
     onReceived {
         |method, params|
         var doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
-        var wordAtCursor;
+        var wordAtCursor, startTime, result, elapsedMs;
+
+        startTime = Main.elapsedTime;
 
         // If the doc isn't open yet, try to rehydrate from last didOpen cache.
         if (doc.isOpen.not or: { doc.string.isNil }) {
@@ -41,7 +43,12 @@ GotoDefinitionProvider : LSPProvider {
 
         Log('LanguageServer.quark').info("Found word at cursor: %", wordAtCursor);
 
-        ^(wordAtCursor !? { this.getDefinitionsForWord(wordAtCursor) })
+        result = wordAtCursor !? { this.getDefinitionsForWord(wordAtCursor) };
+
+        elapsedMs = (Main.elapsedTime - startTime) * 1000;
+        Log('LanguageServer.quark').debug("[timing] definition lookup: %.2fms", elapsedMs);
+
+        ^result
     }
 
     getDefinitionsForWord {
