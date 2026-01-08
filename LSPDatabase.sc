@@ -24,10 +24,10 @@ LSPDatabase {
 
         lookupCount = lookupCount + 1;
 
-        // Log cache stats every 100 lookups at debug level
+        // Log cache stats every 100 lookups
         if ((lookupCount % 100) == 0) {
             stats = lookupCache.stats;
-            Log('LanguageServer.quark').debug(
+            Log('LanguageServer.quark').info(
                 "[cache] lookups=% size=% hits=% misses=% hitRate=%.1f%%",
                 lookupCount, stats[\size], stats[\hits], stats[\misses], stats[\hitRate] * 100
             );
