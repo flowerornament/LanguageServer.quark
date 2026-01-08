@@ -6,9 +6,12 @@
 LSPDatabase {
     classvar allMethodNames, allMethods, allClasses, allMethodsByName, methodLocations;
     classvar classSymbols, methodSymbols, allSymbolObjects;
+    classvar classDocCache, classFileCache;
 
     *initClass {
         methodLocations = ();
+        classDocCache = ();
+        classFileCache = ();
     }
 
     *asInteger {
@@ -249,6 +252,113 @@ LSPDatabase {
     *methodsForName {
         |methodName|
         ^this.allMethodsByName[methodName.asSymbol]
+    }
+
+    // Cached file content read to avoid repeated disk I/O.
+    *getFileContent {
+        |path|
+        var content;
+
+        if (path.isNil) { ^nil };
+
+        // Return cached if available
+        if (classFileCache[path].notNil) { ^classFileCache[path] };
+
+        // Read from disk
+        if (File.exists(path)) {
+            try {
+                content = File.readAllString(path);
+                classFileCache[path] = content;
+            } { |error|
+                Log('LanguageServer.quark').warning("Failed to read file %: %", path, error);
+                content = nil;
+            };
+        };
+
+        ^content
+    }
+
+    // Returns cached class documentation (/* ... */ comment) or nil.
+    *getClassDocumentation {
+        |class|
+        var path, fileContent, start, stop, docString;
+
+        // Handle symbol/string input
+        if (class.isKindOf(Class).not) {
+            class = class.asSymbol.asClass;
+        };
+
+        if (class.isNil) { ^nil };
+
+        // Return cached if available (includes nil for "no doc found")
+        if (classDocCache.includesKey(class.name)) {
+            ^classDocCache[class.name]
+        };
+
+        path = class.filenameSymbol !? _.asString;
+        if (path.isNil) {
+            classDocCache[class.name] = nil;
+            ^nil
+        };
+
+        fileContent = this.getFileContent(path);
+        if (fileContent.isNil) {
+            classDocCache[class.name] = nil;
+            ^nil
+        };
+
+        // Extract block comment /* ... */
+        start = fileContent.find("/*");
+        stop = fileContent.find("*/");
+
+        if (start.notNil and: { stop.notNil and: { stop > start } }) {
+            docString = fileContent.copyRange(start + 2, stop - 1).stripWhiteSpace;
+        } {
+            docString = nil;
+        };
+
+        classDocCache[class.name] = docString;
+        ^docString
+    }
+
+    // Returns a Location covering the first block comment in the class file.
+    *getClassDocRange {
+        |class|
+        var path, fileContent, lines, startLine, endLine;
+
+        if (class.isKindOf(Class).not) {
+            class = class.asSymbol.asClass;
+        };
+
+        if (class.isNil) { ^nil };
+
+        path = class.filenameSymbol !? _.asString;
+        if (path.isNil) { ^nil };
+
+        fileContent = this.getFileContent(path);
+        if (fileContent.isNil) { ^nil };
+
+        lines = fileContent.split($\n);
+
+        lines.do { |ln, idx|
+            if (startLine.isNil and: { ln.find("/*").notNil }) {
+                startLine = idx;
+            };
+            if (startLine.notNil and: { endLine.isNil and: { ln.find("*/").notNil } }) {
+                endLine = idx;
+            };
+        };
+
+        startLine = startLine ?? { 0 };
+        endLine = endLine ?? { startLine };
+
+        ^(
+            uri: path.standardizePath.pathToFileURI,
+            range: (
+                start: (line: startLine, character: 0),
+                end: (line: endLine, character: 0)
+            )
+        )
     }
 
     *methodArgString {

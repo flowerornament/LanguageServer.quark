@@ -88,35 +88,6 @@ FindReferencesProvider : LSPProvider {
 
     // Returns a range covering the first block comment in the class file (or line 0 if none).
     *prClassDocRange { |cls|
-        var path = cls.filenameSymbol !? _.asString;
-        var startLine, endLine, fileLines;
-        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
-        if (path.isNil) { ^nil };
-
-        if (debug) { ("REFS DEBUG classDoc path=%".format(path)).postln; };
-
-        if (File.exists(path)) {
-            fileLines = File.readAllString(path).split($\n);
-            fileLines.do {
-                |ln, idx|
-                if (startLine.isNil and: { ln.find("/*").notNil }) {
-                    startLine = idx;
-                };
-                if (startLine.notNil and: { endLine.isNil and: { ln.find("*/").notNil } }) {
-                    endLine = idx;
-                };
-            };
-        };
-
-        startLine = startLine ?? { 0 };
-        endLine = endLine ?? { startLine };
-
-        ^(
-            uri: path.standardizePath.pathToFileURI,
-            range: (
-                start: (line: startLine, character: 0),
-                end: (line: endLine, character: 0)
-            )
-        )
+        ^LSPDatabase.getClassDocRange(cls)
     }
 }

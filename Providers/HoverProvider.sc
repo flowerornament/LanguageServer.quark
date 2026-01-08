@@ -50,22 +50,7 @@ HoverProvider : LSPProvider {
         // Try to show a short doc comment from the class file if available.
         classDoc = wordAtCursor !? {
             var cls = wordAtCursor.asSymbol.asClass;
-            var path = cls !? _.filenameSymbol !? _.asString;
-            var fileString, start, stop;
-
-            if (path.notNil and: { File.exists(path) }) {
-                fileString = File.readAllString(path);
-                start = fileString.find("/*");
-                stop = fileString.find("*/");
-                if (start.notNil and: { stop.notNil and: { stop > start } }) {
-                    fileString = fileString.copyRange(start + 2, stop - 1).stripWhiteSpace;
-                } {
-                    fileString = nil;
-                };
-                fileString;
-            } {
-                nil
-            }
+            cls !? { LSPDatabase.getClassDocumentation(cls) }
         };
 
         ^(wordAtCursor !? {

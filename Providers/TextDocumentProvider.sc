@@ -153,8 +153,19 @@ TextDocumentProvider : LSPProvider {
 
         // Handle race condition where didChange arrives before didOpen is processed
         if (doc.isOpen.not) {
-            Log('LanguageServer.quark').warning("Document % received change before open, forcing open", uri);
-            doc.isOpen_(true);
+            Log('LanguageServer.quark').warning("Document % received change before open, attempting rehydration", uri);
+            lastOpenByUri[uri] !? { |cached|
+                doc.initFromLSP(
+                    cached["languageId"] ?? cached[\languageId],
+                    (cached["version"] ?? cached[\version] ?? 0).asInteger,
+                    cached["text"] ?? cached[\text] ?? ""
+                ).isOpen_(true);
+                Log('LanguageServer.quark').info("Document % rehydrated from cache, size=%", uri, doc.string !? _.size);
+            } ?? {
+                // Fallback: create minimal document state so changes can apply
+                Log('LanguageServer.quark').warning("Document % has no cached state, initializing empty", uri);
+                doc.initFromLSP("supercollider", 0, "").isOpen_(true);
+            };
         };
 
         changes = changes.collect {
