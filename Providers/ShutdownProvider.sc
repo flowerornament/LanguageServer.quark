@@ -51,6 +51,8 @@ ShutdownProvider : LSPProvider {
                 "*** EXITING ***".postln;
                 Log('LanguageServer.quark').info("Exiting");
                 File.closeAll;
+                // Stop LSP connection cleanly before disconnecting network
+                LSPConnection.connection !? { |conn| conn.stop };
                 NetAddr.disconnectAll;
                 {
                     receivedShutdown.if(0, 1).exit;

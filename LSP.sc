@@ -3,6 +3,7 @@ LSPConnection {
     classvar <providers, <>preprocessor;
     classvar readyMsg = "***LSP READY***";
     classvar <handlerThread;
+    classvar <rawRecvFunc;
 
     var <>inPort, <>outPort;
     var socket;
@@ -101,10 +102,11 @@ LSPConnection {
             };
         };
 
-        thisProcess.addRawRecvFunc({
+        rawRecvFunc = {
             |msg, time, replyAddr, recvPort|
             this.prOnReceived(time, replyAddr, msg);
-        });
+        };
+        thisProcess.addRawRecvFunc(rawRecvFunc);
 
         // @TODO Is this the only "default" provider we want?
         this.addProvider(InitializeProvider(this, {}));
@@ -120,7 +122,22 @@ LSPConnection {
     }
 
     stop {
-        // @TODO Unregister and close ports?
+        // Unregister raw receive function
+        rawRecvFunc !? { thisProcess.removeRawRecvFunc(rawRecvFunc) };
+        rawRecvFunc = nil;
+
+        // Close UDP port
+        inPort !? { thisProcess.closeUDPPort(inPort) };
+
+        // Clear connection state
+        socket = nil;
+        messageBuffer = "";
+        messageLengthExpected = nil;
+
+        // Clear providers (except InitializeProvider which survives recompile)
+        providers = ();
+
+        Log('LanguageServer.quark').info("LSP connection stopped");
     }
 
     serverInfo {
