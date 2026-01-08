@@ -87,8 +87,8 @@ FindReferencesProvider : LSPProvider {
             }
         } ?? {[]};
 
-        elapsedMs = (Main.elapsedTime - startTime) * 1000;
-        Log('LanguageServer.quark').info("[timing] references lookup: %.2fms", elapsedMs);
+        elapsedMs = ((Main.elapsedTime - startTime) * 1000).round(0.01);
+        Log('LanguageServer.quark').info("[timing] references lookup: %ms", elapsedMs);
 
         ^result
     }

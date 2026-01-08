@@ -45,8 +45,8 @@ GotoDefinitionProvider : LSPProvider {
 
         result = wordAtCursor !? { this.getDefinitionsForWord(wordAtCursor) };
 
-        elapsedMs = (Main.elapsedTime - startTime) * 1000;
-        Log('LanguageServer.quark').info("[timing] definition lookup: %.2fms", elapsedMs);
+        elapsedMs = ((Main.elapsedTime - startTime) * 1000).round(0.01);
+        Log('LanguageServer.quark').info("[timing] definition lookup: %ms", elapsedMs);
 
         ^result
     }

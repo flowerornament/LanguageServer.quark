@@ -28,8 +28,8 @@ LSPDatabase {
         if ((lookupCount % 100) == 0) {
             stats = lookupCache.stats;
             Log('LanguageServer.quark').info(
-                "[cache] lookups=% size=% hits=% misses=% hitRate=%.1f%%",
-                lookupCount, stats[\size], stats[\hits], stats[\misses], stats[\hitRate] * 100
+                "[cache] lookups=% size=% hits=% misses=% hitRate=%",
+                lookupCount, stats[\size], stats[\hits], stats[\misses], (stats[\hitRate] * 100).round(0.1).asString ++ "%"
             );
         };
 
