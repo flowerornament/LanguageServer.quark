@@ -2,6 +2,7 @@
 InitializeProvider : LSPProvider {
     classvar <>suggestedServerPort=57110;
     classvar <>initializeActions, <>startupFiles;
+    classvar <>cachedInitializeParams;  // Survives recompile
 
     var <initializationOptions, initializeParams;
 
@@ -59,6 +60,7 @@ InitializeProvider : LSPProvider {
         "*** INITIALIZE REQUEST RECEIVED ***".postln;
 
         initializeParams = params;
+        this.class.cachedInitializeParams = params;  // Cache for recompile survival
         initializationOptions = initializeParams["initializationOptions"] ?? {()};
 
         initializeParams["workspaceFolders"] !? {
@@ -105,6 +107,7 @@ InitializeProvider : LSPProvider {
         serverCapabilities = ();
         this.addProviders(initializeParams["capabilities"], serverCapabilities);
         Log('LanguageServer.quark').info("Server capabilities are: %", serverCapabilities);
+        Log('LanguageServer.quark').info("Registered providers: %", LSPConnection.providers.keys);
 
         // After providers are registered, let TextDocumentProvider process any queued opens/changes
         TextDocumentProvider.processPending();
@@ -115,6 +118,23 @@ InitializeProvider : LSPProvider {
             "serverInfo": server.serverInfo,
             "capabilities": serverCapabilities;
         );
+    }
+
+    *reregisterProvidersIfCached {
+        |server|
+        cachedInitializeParams !? {
+            |params|
+            var provider = this.new(server, {});
+            var serverCapabilities = ();
+
+            "*** RE-REGISTERING PROVIDERS FROM CACHED INITIALIZE ***".postln;
+            Log('LanguageServer.quark').info("Re-registering providers from cached initializeParams");
+
+            provider.addProviders(params["capabilities"], serverCapabilities);
+            Log('LanguageServer.quark').info("Re-registered server capabilities: %", serverCapabilities);
+
+            TextDocumentProvider.processPending();
+        };
     }
 
     addProviders {

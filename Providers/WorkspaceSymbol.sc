@@ -19,7 +19,11 @@ WorkspaceSymbolProvider : LSPProvider {
     onReceived {
         |method, params|
         var query = params["query"];
-        
-        ^LSPDatabase.findSymbols(query, 100);
+        var result;
+
+        Log('LanguageServer.quark').info("WorkspaceSymbol query: '%'", query);
+        result = LSPDatabase.findSymbols(query, 100);
+        Log('LanguageServer.quark').info("WorkspaceSymbol result count: %", result.size);
+        ^result;
     }
 }

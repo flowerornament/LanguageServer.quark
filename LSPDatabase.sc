@@ -754,14 +754,28 @@ LSPDatabase {
         var result = Array(limit);
         var index;
 
+        Log('LanguageServer.quark').info("findSymbols: query='%', symbolObjects.size=%", query, symbolObjects.size);
+
         index = LSPDatabase.findSymbolStartIndex(query, symbolObjects);
         limit = index + limit;
 
+        Log('LanguageServer.quark').info("findSymbols: startIndex=%, limit=%, searching...", index, limit);
+
         query = query.toLower;
-        while { index < limit and: { symbolObjects[index].name.asString.toLower.beginsWith(query) }} {
-            result = result.add(symbolObjects[index]);
-            index = index + 1;
+        // Handle empty query specially - beginsWith("") returns false in SC
+        if (query.isEmpty) {
+            while { index < limit and: { index < symbolObjects.size }} {
+                result = result.add(symbolObjects[index]);
+                index = index + 1;
+            };
+        } {
+            while { index < limit and: { index < symbolObjects.size } and: { symbolObjects[index].name.asString.toLower.beginsWith(query) }} {
+                result = result.add(symbolObjects[index]);
+                index = index + 1;
+            };
         };
+
+        Log('LanguageServer.quark').info("findSymbols: found % results", result.size);
 
         ^result.collect {
             |symbolObj|

@@ -113,6 +113,9 @@ LSPConnection {
         // (doesn't require LSP initialization handshake)
         this.addProvider(ExecuteCommandProvider(this, {}));
 
+        // Re-register providers from cached initializeParams (survives recompile)
+        InitializeProvider.reregisterProvidersIfCached(this);
+
         readyMsg.postln;
     }
 
