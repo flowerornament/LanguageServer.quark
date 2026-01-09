@@ -172,7 +172,7 @@ InitializeProvider : LSPProvider {
 
     getClientCapability {
         |clientCapabilities, path|
-        Log('LanguageServer.quark').debug("Checking for client capability at % (clientCapabilities: %)", path, clientCapabilities);
+        Log('LanguageServer.quark').debug("Checking for client capability at %", path);
 
         if (path.isNil) { ^() };
 

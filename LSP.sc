@@ -377,7 +377,6 @@ LSPConnection {
         response = Deferred();
         response.then({ outstandingRequests[id] = nil });
         outstandingRequests[id] = response;
-        response.debug;
         ^response
     }
 
