@@ -56,8 +56,9 @@ InitializeProvider : LSPProvider {
     onReceived {
         |method, params|
         var serverCapabilities, startupPaths;
+        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
 
-        "*** INITIALIZE REQUEST RECEIVED ***".postln;
+        if (debug) { "*** INITIALIZE REQUEST RECEIVED ***".postln; };
 
         initializeParams = params;
         this.class.cachedInitializeParams = params;  // Cache for recompile survival
@@ -81,7 +82,7 @@ InitializeProvider : LSPProvider {
             |range|
             range = [range[0].asInteger, range[1].asInteger];
             this.class.suggestedServerPort = range[0];
-            "Using default server port: % (allocated range: %-%)".format(range[0], range[0], range[1]-1).postln;
+            if (debug) { "Using default server port: % (allocated range: %-%)".format(range[0], range[0], range[1]-1).postln; };
             Server.all.do {
                 |s|
                 s.addr.port = this.class.suggestedServerPort.asInteger;
@@ -126,8 +127,9 @@ InitializeProvider : LSPProvider {
             |params|
             var provider = this.new(server, {});
             var serverCapabilities = ();
+            var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
 
-            "*** RE-REGISTERING PROVIDERS FROM CACHED INITIALIZE ***".postln;
+            if (debug) { "*** RE-REGISTERING PROVIDERS FROM CACHED INITIALIZE ***".postln; };
             Log('LanguageServer.quark').info("Re-registering providers from cached initializeParams");
 
             provider.addProviders(params["capabilities"], serverCapabilities);

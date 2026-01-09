@@ -25,30 +25,31 @@ ShutdownProvider : LSPProvider {
     onReceived {
         |method, params|
         var code, deferred;
-        
+        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
+
         switch (method)
             { 'shutdown' } {
-                "*** STARTING SHUT DOWN ***".postln;
+                if (debug) { "*** STARTING SHUT DOWN ***".postln; };
                 Log('LanguageServer.quark').info("Preparing to shutdown");
                 receivedShutdown = true;
-                
+
                 // SUBTLE: Calling thisProcess.shutdown kills network sockets, which breaks
                 // our ability to call back to the LSP client. So we need to call everything
                 // EXCEPT for socket disconnect stuff here, and then disconnect sockets later.
                 ShutDown.run();
                 Server.quitAll();
                 Archive.write;
-                
+
                 {
-                    "*** SERVER SHUTDOWN WAS LATE".postln;
+                    Log('LanguageServer.quark').warning("Server shutdown was late - forcing exit");
                     1.exit;
                 }.defer(2);
-                
-                "*** SHOWDOWN IMMINENT ***".postln;
+
+                if (debug) { "*** SHUTDOWN IMMINENT ***".postln; };
                 ^nil;
             }
             { 'exit' } {
-                "*** EXITING ***".postln;
+                if (debug) { "*** EXITING ***".postln; };
                 Log('LanguageServer.quark').info("Exiting");
                 File.closeAll;
                 // Stop LSP connection cleanly before disconnecting network

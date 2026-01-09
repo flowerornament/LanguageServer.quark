@@ -118,6 +118,7 @@ LSPConnection {
         // Re-register providers from cached initializeParams (survives recompile)
         InitializeProvider.reregisterProvidersIfCached(this);
 
+        // NOTE: readyMsg is required by sc_launcher to detect sclang startup - do not gate
         readyMsg.postln;
     }
 
@@ -166,9 +167,11 @@ LSPConnection {
 
     request {
         |methodName, params|
+        var debug = "SCLANG_LSP_DEBUG".getenv().notNil;
+
         providers[methodName] !? {
             |provider|
-            ["LANGUAGESERVER.QUARK", "dispatch", methodName, params ?? ()].postln;
+            if (debug) { ["LANGUAGESERVER.QUARK", "dispatch", methodName, params ?? ()].postln; };
             ^provider.sendRequest(params)
         } ?? {
             Error("Can't do request, no providers for method '%'".format(methodName)).throw
