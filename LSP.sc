@@ -127,8 +127,12 @@ LSPConnection {
         rawRecvFunc !? { thisProcess.removeRawRecvFunc(rawRecvFunc) };
         rawRecvFunc = nil;
 
-        // Close UDP port
-        inPort !? { thisProcess.closeUDPPort(inPort) };
+        // Close UDP port (method added in SC 3.15+)
+        inPort !? {
+            if (thisProcess.respondsTo(\closeUDPPort)) {
+                thisProcess.closeUDPPort(inPort)
+            }
+        };
 
         // Clear connection state
         socket = nil;
