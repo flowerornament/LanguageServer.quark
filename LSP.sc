@@ -207,7 +207,7 @@ LSPConnection {
             ^nil
         };
 
-        Log('LanguageServer.quark').info("Message received: %, %, %", time, replyAddr, message);
+        Log('LanguageServer.quark').debug("Message received: %, %, %", time, replyAddr, message);
 
         this.prParseMessage(message) !? this.prHandleMessage(_)
     }
@@ -224,10 +224,10 @@ LSPConnection {
                 messageLengthExpected = found[1][1].asInteger;
                 endOfHeader = found[2][0] + 1;
                 messageBuffer = messageBuffer[endOfHeader..];
-                Log('LanguageServer.quark').info("Expecting % bytes, received % so far", messageLengthExpected, messageBuffer.size());
+                Log('LanguageServer.quark').debug("Expecting % bytes, received % so far", messageLengthExpected, messageBuffer.size());
             }
         } {
-            Log('LanguageServer.quark').info("Expecting % bytes, received % so far", messageLengthExpected, messageBuffer.size());
+            Log('LanguageServer.quark').debug("Expecting % bytes, received % so far", messageLengthExpected, messageBuffer.size());
         };
 
         if (messageLengthExpected.notNil and: {
@@ -264,14 +264,14 @@ LSPConnection {
         provider = providers[method];
 
         if (provider.isNil) {
-            Log('LanguageServer.quark').info("No provider found for method: %", method);
+            Log('LanguageServer.quark').debug("No provider found for method: %", method);
 
             // Early didOpen/didChange can arrive before TextDocumentProvider registers; queue them.
             if ((method.asString == "textDocument/didOpen") || (method.asString == "textDocument/didChange")) {
                 TextDocumentProvider.queuePending(method.asString, params);
             };
         } {
-            Log('LanguageServer.quark').info("Found method provider: %", provider);
+            Log('LanguageServer.quark').debug("Found method provider: %", provider);
 
             // Preprocess param values into a usable state
             try {
@@ -325,7 +325,7 @@ LSPConnection {
 
         if (outstandingRequests[id].notNil) {
             // This is a response to a request of ours, so handle this directly.
-            Log('LanguageServer.quark').info("Handling a follow-up request with: %", outstandingRequests[id]);
+            Log('LanguageServer.quark').debug("Handling a follow-up request with: %", outstandingRequests[id]);
             outstandingRequests[id].value = result;
             ^this;
         } {
@@ -418,7 +418,7 @@ LSPConnection {
         message = this.prEncodeMessage(dict);
         messageSize = message.size;
 
-        Log('LanguageServer.quark').info("Responding with: %", message);
+        Log('LanguageServer.quark').debug("Responding with: %", message);
 
         try {
             if (message.size < maxSize) {

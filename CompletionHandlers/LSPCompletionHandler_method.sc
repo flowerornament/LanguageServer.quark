@@ -20,7 +20,7 @@
                 |prefixString, trigger, completion, provideCompletionsFunc|
                 var result = LSPDatabase.findMethods(completion, LSPCompletionHandler.completionLimit);
 
-                Log('LanguageServer.quark').info("Found % method completions", result[\items].size);
+                Log('LanguageServer.quark').debug("Found % method completions", result[\items].size);
 
                 provideCompletionsFunc.(result[\items], result[\isIncomplete])
             }

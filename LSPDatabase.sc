@@ -27,7 +27,7 @@ LSPDatabase {
         // Log cache stats every 100 lookups
         if ((lookupCount % 100) == 0) {
             stats = lookupCache.stats;
-            Log('LanguageServer.quark').info(
+            Log('LanguageServer.quark').debug(
                 "[cache] lookups=% size=% hits=% misses=% hitRate=%",
                 lookupCount, stats[\size], stats[\hits], stats[\misses], (stats[\hitRate] * 100).round(0.1).asString ++ "%"
             );
@@ -428,7 +428,7 @@ LSPDatabase {
         ^this.prCachedLookup("defs", word, {
             var methods, asClass;
 
-            Log('LanguageServer.quark').warning("findDefinitions for word: %", word);
+            Log('LanguageServer.quark').debug("findDefinitions for word: %", word);
 
             if (word.isClassName and: { (asClass = word.asClass).notNil }) {
                 [this.renderClassLocation(asClass)]
@@ -670,7 +670,7 @@ LSPDatabase {
             ch !? { ch.isAlphaNum or: { ch == $_ } } ?? { false }
         };
 
-        Log('LanguageServer.quark').warning(
+        Log('LanguageServer.quark').debug(
             "Word lookup: docOpen=% line=% char=% docSize=% lineSize=%",
             doc.isOpen,
             line,
@@ -908,12 +908,12 @@ LSPDatabase {
         var result = Array(limit);
         var index;
 
-        Log('LanguageServer.quark').info("findSymbols: query='%', symbolObjects.size=%", query, symbolObjects.size);
+        Log('LanguageServer.quark').debug("findSymbols: query='%', symbolObjects.size=%", query, symbolObjects.size);
 
         index = LSPDatabase.findSymbolStartIndex(query, symbolObjects);
         limit = index + limit;
 
-        Log('LanguageServer.quark').info("findSymbols: startIndex=%, limit=%, searching...", index, limit);
+        Log('LanguageServer.quark').debug("findSymbols: startIndex=%, limit=%, searching...", index, limit);
 
         query = query.toLower;
         // Handle empty query specially - beginsWith("") returns false in SC
@@ -929,7 +929,7 @@ LSPDatabase {
             };
         };
 
-        Log('LanguageServer.quark').info("findSymbols: found % results", result.size);
+        Log('LanguageServer.quark').debug("findSymbols: found % results", result.size);
 
         ^result.collect {
             |symbolObj|

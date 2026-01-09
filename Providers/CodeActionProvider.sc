@@ -124,7 +124,7 @@ CodeActionProvider : LSPProvider {
             this.makeCommandAction("SuperCollider: Recompile Class Library", "supercollider.internal.recompile")
         );
 
-        Log('LanguageServer.quark').info("Code actions for %:% — %", uri, normalizedRange, actions);
+        Log('LanguageServer.quark').debug("Code actions for %:% — %", uri, normalizedRange, actions);
 
         ^actions
     }

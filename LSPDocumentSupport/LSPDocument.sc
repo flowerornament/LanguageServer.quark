@@ -175,7 +175,7 @@ LSPDocument : Document {
     
     initFromLSP {
         |inLanguageId, inVersion, inText|
-        Log('LanguageServer.quark').info("Creating LSP document % lang=% version=% size=%", quuid, inLanguageId, inVersion, inText.size);
+        Log('LanguageServer.quark').debug("Creating LSP document % lang=% version=% size=%", quuid, inLanguageId, inVersion, inText.size);
 
         title = this.path !? { |p| PathName(p).fileNameWithoutExtension } ?? { "unknown" };
         isEdited = false;
@@ -204,7 +204,7 @@ LSPDocument : Document {
     }
     
     initFromDisk {
-        Log('LanguageServer.quark').info("Loading LSP document from disk % [size=%]", quuid);
+        Log('LanguageServer.quark').debug("Loading LSP document from disk % [size=%]", quuid);
         
         title = this.path !? { |p| PathName(p).fileNameWithoutExtension } ?? { "unknown" };
         isEdited = false;
@@ -248,7 +248,7 @@ LSPDocument : Document {
     }
     
     initFromIDE {|id, argtitle, argstring, argisEdited, argPath, selStart, selSize|
-        Log('LanguageServer.quark').info("Syncing document % to size=%", id, argstring.size);
+        Log('LanguageServer.quark').debug("Syncing document % to size=%", id, argstring.size);
         
         quuid = id;
         title = argtitle;

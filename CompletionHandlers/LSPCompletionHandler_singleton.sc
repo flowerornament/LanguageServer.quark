@@ -12,7 +12,7 @@
                 |prefix|
                 var prefixClass = prefix.findRegexp("[^\\w-]*([A-Z]\\w*)$");
                 
-                Log('LanguageServer.quark').info("prefix: %, prefixClass: %", prefix, prefixClass);
+                Log('LanguageServer.quark').debug("prefix: %, prefixClass: %", prefix, prefixClass);
                 
                 if (prefixClass.notEmpty) {
                     prefixClass = prefixClass[1][1];

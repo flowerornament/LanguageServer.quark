@@ -21,9 +21,9 @@ WorkspaceSymbolProvider : LSPProvider {
         var query = params["query"];
         var result;
 
-        Log('LanguageServer.quark').info("WorkspaceSymbol query: '%'", query);
+        Log('LanguageServer.quark').debug("WorkspaceSymbol query: '%'", query);
         result = LSPDatabase.findSymbols(query, LSPCompletionHandler.completionLimit);
-        Log('LanguageServer.quark').info("WorkspaceSymbol result count: %", result.size);
+        Log('LanguageServer.quark').debug("WorkspaceSymbol result count: %", result.size);
         ^result;
     }
 }

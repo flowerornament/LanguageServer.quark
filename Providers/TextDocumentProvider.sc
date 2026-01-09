@@ -44,7 +44,7 @@ TextDocumentProvider : LSPProvider {
                 pendingChanges = pendingChanges.add(params);
             }
         };
-        Log('LanguageServer.quark').warning(
+        Log('LanguageServer.quark').debug(
             "Queued pending % (opens=% changes=%)",
             method,
             pendingOpens.size,
@@ -63,11 +63,11 @@ TextDocumentProvider : LSPProvider {
 
     onReceived {
         |method, params|
-        Log('LanguageServer.quark').info("Handling: %", method);
+        Log('LanguageServer.quark').debug("Handling: %", method);
 
         // If initialization hasn't completed yet, queue didOpen/didChange.
         if (initialized.not and: { ["textDocument/didOpen", "textDocument/didChange"].includes(method) }) {
-            Log('LanguageServer.quark').warning("Queuing % until server is initialized", method);
+            Log('LanguageServer.quark').debug("Queuing % until server is initialized", method);
             if (method == 'textDocument/didOpen') {
                 pendingOpens = pendingOpens.add(params);
             } {
@@ -114,7 +114,7 @@ TextDocumentProvider : LSPProvider {
 
     didOpen {
         |uri, languageId, version, text|
-        Log('LanguageServer.quark').warning("didOpen % version=% size=%", uri, version, text.size);
+        Log('LanguageServer.quark').debug("didOpen % version=% size=%", uri, version, text.size);
         lastOpenByUri[uri] = (
             uri: uri,
             languageId: languageId,
@@ -149,7 +149,7 @@ TextDocumentProvider : LSPProvider {
         |uri, version, changes|
         var doc = LSPDocument.findByQUuid(uri);
         var range;
-        Log('LanguageServer.quark').warning("didChange % version=% changes=%", uri, version, changes.size);
+        Log('LanguageServer.quark').debug("didChange % version=% changes=%", uri, version, changes.size);
 
         // Handle race condition where didChange arrives before didOpen is processed
         if (doc.isOpen.not) {
@@ -160,7 +160,7 @@ TextDocumentProvider : LSPProvider {
                     (cached["version"] ?? cached[\version] ?? 0).asInteger,
                     cached["text"] ?? cached[\text] ?? ""
                 ).isOpen_(true);
-                Log('LanguageServer.quark').info("Document % rehydrated from cache, size=%", uri, doc.string !? _.size);
+                Log('LanguageServer.quark').debug("Document % rehydrated from cache, size=%", uri, doc.string !? _.size);
             } ?? {
                 // Fallback: create minimal document state so changes can apply
                 Log('LanguageServer.quark').warning("Document % has no cached state, initializing empty", uri);
@@ -188,7 +188,7 @@ TextDocumentProvider : LSPProvider {
     }
 
     *processPending {
-        Log('LanguageServer.quark').warning("Processing % pending didOpen and % pending didChange messages", pendingOpens.size, pendingChanges.size);
+        Log('LanguageServer.quark').info("Processing % pending didOpen and % pending didChange messages", pendingOpens.size, pendingChanges.size);
         initialized = true;
 
         pendingOpens.do {

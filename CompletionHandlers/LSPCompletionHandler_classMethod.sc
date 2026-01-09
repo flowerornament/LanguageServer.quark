@@ -27,7 +27,7 @@
                 |prefixClass, trigger, completion, provideCompletionsFunc|
                 var results = LSPDatabase.findClassMethods(prefixClass);
 
-                Log('LanguageServer.quark').info("Found % class method completions", results.size);
+                Log('LanguageServer.quark').debug("Found % class method completions", results.size);
 
                 provideCompletionsFunc.value(results, false);
             }

@@ -21,7 +21,7 @@ ShowDocument : LSPRequest {
             }
         )).then({
             |options|
-            Log('LanguageServer.quark').info("client options: %", options);
+            Log('LanguageServer.quark').debug("client options: %", options);
             
             clientOptions.clear();
             options.do {

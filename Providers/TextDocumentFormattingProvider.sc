@@ -32,8 +32,8 @@ TextDocumentFormattingProvider : LSPProvider {
     
     onReceived {
         |method, params|
-        Log('LanguageServer.quark').info("Handling: %", method);
-        
+        Log('LanguageServer.quark').debug("Handling: %", method);
+
         if (formatterEnabled.not) { ^nil };
         
         switch(
@@ -71,7 +71,7 @@ TextDocumentFormattingProvider : LSPProvider {
         };
         
         text = formatter.format(text);
-        Log('LanguageServer.quark').info("Reformatting to:\n%", text);
+        Log('LanguageServer.quark').debug("Reformatting to:\n%", text);
         
         ^[(
             range: (
@@ -105,8 +105,8 @@ TextDocumentTypeFormattingProvider : LSPProvider {
         
         onReceived {
             |method, params|
-            Log('LanguageServer.quark').info("Handling: %", method);
-            
+            Log('LanguageServer.quark').debug("Handling: %", method);
+
             if (TextDocumentFormattingProvider.formatterEnabled.not) { ^nil };
             
             switch(

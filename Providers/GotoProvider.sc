@@ -24,12 +24,12 @@ GotoProvider : LSPProvider {
             params["position"]["character"].asInteger
         );
 
-        Log('LanguageServer.quark').info("Found word at cursor: %", wordAtCursor);
+        Log('LanguageServer.quark').debug("Found word at cursor: %", wordAtCursor);
 
         result = wordAtCursor !? { this.getDefinitionsForWord(wordAtCursor) };
 
         elapsedMs = ((Main.elapsedTime - startTime) * 1000).round(0.01);
-        Log('LanguageServer.quark').info("[timing] % lookup: %ms", method, elapsedMs);
+        Log('LanguageServer.quark').debug("[timing] % lookup: %ms", method, elapsedMs);
 
         ^result
     }

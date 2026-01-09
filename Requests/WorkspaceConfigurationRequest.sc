@@ -12,7 +12,7 @@ WorkspaceConfiguration : LSPRequest {
     
     init {
         |clientCapabilities|
-        Log('LanguageServer.quark').info("initializing WorkspaceConfiguration");
+        Log('LanguageServer.quark').debug("initializing WorkspaceConfiguration");
         
         sections = [
             "sclang.evaluateResultPrefix",
@@ -37,7 +37,7 @@ WorkspaceConfiguration : LSPRequest {
             }
         )).then({
             |options|
-            Log('LanguageServer.quark').info("client options: %", options);
+            Log('LanguageServer.quark').debug("client options: %", options);
             
             clientOptions.clear();
             options.do {
