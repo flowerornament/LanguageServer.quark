@@ -4,9 +4,11 @@ LSPConnection {
     classvar readyMsg = "***LSP READY***";
     classvar <handlerThread;
     classvar <rawRecvFunc;
+    classvar errorCodes;
 
     var <>inPort, <>outPort;
     var socket;
+    var <isRunning = false;
     var messageLengthExpected, messageBuffer;
     var requestId=0;
     var outstandingRequests;
@@ -19,6 +21,15 @@ LSPConnection {
 
         // Initialization
         providers = ();
+
+        errorCodes = (
+            parseError:           -32700,
+            invalidRequest:       -32600,
+            methodNotFound:       -32601,
+            invalidParams:        -32602,
+            internalError:        -32603,
+            serverNotInitialized: -32002,
+        );
 
         // All params objects are passed through preprocessor.
         // This can normalize common param fields.
@@ -117,9 +128,19 @@ LSPConnection {
 
         // NOTE: readyMsg is required by sc_launcher to detect sclang startup - do not gate
         readyMsg.postln;
+
+        isRunning = true;
     }
 
     stop {
+        isRunning = false;
+
+        // Clear outstanding requests
+        outstandingRequests.keysValuesDo { |id, deferred|
+            Log('LanguageServer.quark').warning("Cancelling outstanding request: %", id);
+        };
+        outstandingRequests = ();
+
         // Unregister raw receive function
         rawRecvFunc !? { thisProcess.removeRawRecvFunc(rawRecvFunc) };
         rawRecvFunc = nil;
@@ -180,6 +201,11 @@ LSPConnection {
 
     prOnReceived {
         |time, replyAddr, message|
+
+        if (isRunning.not) {
+            Log('LanguageServer.quark').warning("Message received while not running, ignoring");
+            ^nil
+        };
 
         Log('LanguageServer.quark').info("Message received: %, %, %", time, replyAddr, message);
 
@@ -282,7 +308,7 @@ LSPConnection {
                 } {
                     this.prHandleErrorResponse(
                         id: id,
-                        code: error.class.identityHash,
+                        code: errorCodes[\internalError],
                         message: error.what,
                     );
                 }
@@ -382,21 +408,32 @@ LSPConnection {
         var maxSize = 6000;
         var offset = 0;
         var packetSize;
-        var message = this.prEncodeMessage(dict);
-        var messageSize = message.size;
+        var message, messageSize;
+
+        if (isRunning.not or: { socket.isNil }) {
+            Log('LanguageServer.quark').error("Cannot send message: connection not running");
+            ^nil
+        };
+
+        message = this.prEncodeMessage(dict);
+        messageSize = message.size;
 
         Log('LanguageServer.quark').info("Responding with: %", message);
 
-        if (message.size < maxSize) {
-            socket.sendRaw(message);
-        } {
-            while { offset < messageSize } {
-                packetSize = min(messageSize, maxSize);
-                socket.sendRaw(message[offset..(offset + packetSize - 1)]);
-                offset = offset + packetSize;
+        try {
+            if (message.size < maxSize) {
+                socket.sendRaw(message);
+            } {
+                while { offset < messageSize } {
+                    packetSize = min(messageSize, maxSize);
+                    socket.sendRaw(message[offset..(offset + packetSize - 1)]);
+                    offset = offset + packetSize;
+                }
             }
-        }
-
+        } {
+            |error|
+            Log('LanguageServer.quark').error("Network send failed: %", error.what);
+        };
     }
 }
 
