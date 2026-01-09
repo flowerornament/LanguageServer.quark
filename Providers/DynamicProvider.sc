@@ -1,4 +1,4 @@
-// @TODO Build handlers using runtime-defined functions.
+// Placeholder for dynamically-registered LSP handlers.
 DynamicProvider : LSPProvider {
     *all {
         ^[]

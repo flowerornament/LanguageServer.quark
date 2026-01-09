@@ -23,7 +23,7 @@ WorkspaceConfiguration : LSPRequest {
         clientOptions = ();
         
         fork {
-            0.01.wait; // @TODO This fails if we fire it immediately on launch. What should we wait for?
+            0.01.wait; // Delay needed - immediate request on launch fails
             this.doRequest();
         }
     }

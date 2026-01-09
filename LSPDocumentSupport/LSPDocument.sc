@@ -1,24 +1,5 @@
 // Language Server Protocol representation of a Document.
-//
-// EVENTUALLY: we need a class hierarchy that looks like:
-//   Document {}
-//   ScIDEDocument : Document {}
-//   LSPDocument : Document {}
-// `Document` becomes our common interface, with each subclass implementing
-// specific details.
-//
-// @TODO Implement incremental edits to documents
-// @TODO Sync allDocuments
-// @TODO Fill in `title` field with something reasonable.
-// @TODO Sync `isEdited`
-// @TODO Properly handle documents without a path.
-// @TODO Connect toFrontAction/endFrontAction for focus (this may not be valid/possible for clients!)
-// @TODO Probably, key+mouse actions are only valid for ScIDEDocument, and do not make sense for LSP
-// @TODO Sync selection
-// @TODO Allow multi-select?
-// @TODO Linked environments won't work for LSP - migrate to a model where code execution is linked to a Document, and wrap this execution in an Environment:use?
-// @TODO `current` doesn't make sense for LSP? Move to ScIDEDocument and respond nil in base class?
-// @TODO Allow LSPDocument to provide CodeLens's, so these can be specified in sclang for cool clickable inline actions?
+// Implements the Document interface for LSP clients (vs ScIDEDocument for the IDE).
 
 LSPDocument : Document {
     // Primary LSP properties

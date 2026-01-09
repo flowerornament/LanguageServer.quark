@@ -75,7 +75,7 @@
             } {
                 Set.new
             }
-        } // @TODO Search across all servers here?
+        }
 }
 
 +Pdef { *isDefClass { ^true } }

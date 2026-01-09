@@ -22,7 +22,6 @@ LSPConnection {
 
         // All params objects are passed through preprocessor.
         // This can normalize common param fields.
-        // @TODO each LSPProvider should have it's own preprocessor?
         preprocessor = {
             |params|
 
@@ -88,7 +87,6 @@ LSPConnection {
     }
 
     start {
-        // @TODO: What do we do before start / after stop? Errors?
         Log('LanguageServer.quark').info("Starting language server, inPort: % outPort:%", inPort, outPort);
 
         3.do {
@@ -108,7 +106,6 @@ LSPConnection {
         };
         thisProcess.addRawRecvFunc(rawRecvFunc);
 
-        // @TODO Is this the only "default" provider we want?
         this.addProvider(InitializeProvider(this, {}));
 
         // Always register ExecuteCommandProvider for HTTP eval endpoint
@@ -146,7 +143,6 @@ LSPConnection {
     }
 
     serverInfo {
-        // @TODO What should go here?
         ^(
             "name": "sclang:LSPConnection",
             "version": "0.1"
@@ -217,7 +213,6 @@ LSPConnection {
                 messageLengthExpected = nil;
             } {
                 |e|
-                // @TODO: Improve error messaging and behavior.
                 "Problem parsing message (%)".format(e).error;
                 e.reportError;
             };
@@ -289,7 +284,6 @@ LSPConnection {
                         id: id,
                         code: error.class.identityHash,
                         message: error.what,
-                        // data: error.getBacktrace // @TODO Render backtrace as JSON?
                     );
                 }
             });

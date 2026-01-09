@@ -517,16 +517,8 @@ LSPDatabase {
                 description: 		method.ownerClass.name.asString
             ),
             kind: 1, 				// CompletionItemKind.Method
-            // deprecated: false,	// mark this as deprecated - no way to use this?
-            // detail:				// @TODO: additional detail
-            // documentation: 		// @TODO: method documentation
-            // detail:			    "detail", // @TODO: additional detail
-            // documentation: 	    ( // @TODO: doc string
-            // 	kind: 				"markdown",
-            // 	value: 				" *Documentation* **goes** here",
-            // 	isTrusted: 			true,
-            // 	supportThemeIcons: 	true
-            // ),
+            // NOTE: detail and documentation fields could be added here
+            // for richer completion info (see LSP CompletionItem spec)
             sortText:				sortText,
             filterText: 			method.name.asString,
             // preselect: 			false,
@@ -709,7 +701,7 @@ LSPDatabase {
 
     *getDocumentRegions {
         |doc|
-        // @TODO Parse properly to account for e.g. comments...
+        // NOTE: This simple parser doesn't handle comments/strings properly
         var lines = doc.string.split($\n);
         var startRe = "^\\(\\s*(//)?\\s*(.*)\\s*$", endRe = "^\\)\\s*\\;?\\s*(//.*)?$";
         var regionStack=[], nameStack=[], regions=[], region;
@@ -829,16 +821,8 @@ LSPDatabase {
         ^(
             label: name,
             kind: 7, 				// CompletionItemKind.Class
-            // deprecated: false,	// mark this as deprecated - no way to use this?
-            // detail:				// @TODO: additional detail
-            // documentation: 		// @TODO: method documentation
-            // detail:			    "detail", // @TODO: additional detail
-            // documentation: 	    ( // @TODO: doc string
-            // 	kind: 				"markdown",
-            // 	value: 				" *Documentation* **goes** here",
-            // 	isTrusted: 			true,
-            // 	supportThemeIcons: 	true
-            // ),
+            // NOTE: detail and documentation fields could be added here
+            // for richer completion info (see LSP CompletionItem spec)
             sortText:				name,
             filterText: 			name,
             // preselect: 			false,

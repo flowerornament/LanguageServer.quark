@@ -8,10 +8,9 @@
             prefixHandler: {
                 |prefix|
                 var prefixClass;
-                
-                // @TODO: Improve regex/parsing to detect all class method like cases....
+
                 prefixClass = prefix.findRegexp("^[^\\w]*([A-Z][A-Za-z0-9_]*)");
-                
+
                 if (prefixClass.notEmpty) {
                     prefixClass = prefixClass[1][1];
                     
@@ -34,9 +33,7 @@
                 #methodNames, methods = LSPDatabase.methodsForClass(prefixClass);
                 
                 Log('LanguageServer.quark').info("Found % method completions", methods.size);
-                
-                // @TODO Fetch results via a single method in LSPDatabase, so we can
-                // cache the entire response data rather than iterating here?
+
                 results = methods.collect(LSPDatabase.makeMethodCompletion(_, true));
                 
                 provideCompletionsFunc.value(results, false);

@@ -40,12 +40,8 @@ InitializeProvider : LSPProvider {
     options {
         // https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
         ^(
-            // @TODO Fetch these from LSPCompletionHandler
             triggerCharacters: [".", "(", "~"],
-
-            // @TODO These are overridden by commit chars for each completion - do we need?
             allCommitCharacters: [],
-
             resolveProvider: false,
             completionItem: (
                 labelDetailsSupport: true

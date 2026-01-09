@@ -77,8 +77,8 @@ LSPProvider : LSPFeature {
 // LSPProvider describes a feature that responds to requests from a client
 LSPRequest : LSPFeature {
     // Send a request for any method in `methodNames`
-    sendRequest { 
-        |params| 		// @TODO What about multiple method names?
+    sendRequest {
+        |params|
         ^server.prHandleRequest(this.methodNames[0], params)
     }
 }

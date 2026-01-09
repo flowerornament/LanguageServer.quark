@@ -1,9 +1,6 @@
-// For now, we messily copy-paste the contents of the existing Document to
-// remind ourselves of the interface and borrow implementations where it's
-// useful. Later, common code should be merged back into the base Document class.
-// Consider this entire class a big @TODO - any uncommented implementations
-// are currently being used by the LSP implementation.
-//
+// Base Document class providing the common interface for document representations.
+// LSPDocument subclass implements this for LSP clients.
+
 Document {
     classvar <dir="", <allDocuments, <>current;
     classvar <globalKeyDownAction, <globalKeyUpAction, <>initAction;

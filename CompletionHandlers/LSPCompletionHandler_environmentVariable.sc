@@ -7,7 +7,6 @@
             trigger: "~",
             prefixHandler: {
                 |prefix|
-                // @TODO improve regex / parsing?
                 if (prefix.isEmpty || "\\W+?$".matchRegexp(prefix)) {
                     true
                 } {
@@ -17,11 +16,9 @@
             action: {
                 |prefix, trigger, completion, provideCompletionsFunc|
                 var results;
-                
-                // @TODO Matching from current environment - this is probably as good as we can do, right?
+
                 results = currentEnvironment.keys;
-                
-                // @TODO Move dictionary constricture to LSPDatabase?
+
                 results = results.asArray.collect({
                     |name|
                     var nameString = name.asString;

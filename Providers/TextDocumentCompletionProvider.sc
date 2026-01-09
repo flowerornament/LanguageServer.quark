@@ -8,18 +8,13 @@ TextDocumentCompletionProvider : LSPProvider {
     
     init {
         |clientCapabilities|
-        // @TODO VSCode supports most capabilities. Do we need to modify our behavior for clients that don't?
     }
-    
+
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionOptions
     options {
         ^(
-            // @TODO Fetch these from LSPCompletionHandler
             triggerCharacters: [".", "(", "~"],
-            
-            // @TODO These are overridden by commit chars for each completion - do we need?
             allCommitCharacters: [],
-            
             resolveProvider: false,
             completionItem: (
                 labelDetailsSupport: true
