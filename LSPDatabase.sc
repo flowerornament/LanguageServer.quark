@@ -873,6 +873,35 @@ LSPDatabase {
         }
     }
 
+    *findMethods {
+        |prefix, limit=20|
+        var range = this.matchMethods(prefix);
+        var isIncomplete = range.size > limit;
+        var result = Array(min(limit, range.size));
+        var count = 0;
+
+        range.do { |index|
+            if (count < limit) {
+                this.allMethods[index] !? { |method|
+                    result = result.add(this.makeMethodCompletion(method));
+                };
+                count = count + 1;
+            }
+        };
+
+        ^(
+            isIncomplete: isIncomplete,
+            items: result
+        )
+    }
+
+    *findClassMethods {
+        |class|
+        var methodNames, methods;
+        #methodNames, methods = this.methodsForClass(class);
+        ^methods.collect { |method| this.makeMethodCompletion(method, true) }
+    }
+
     *findSymbols {
         |query, limit=20|
         var symbolObjects = LSPDatabase.allSymbolObjects;

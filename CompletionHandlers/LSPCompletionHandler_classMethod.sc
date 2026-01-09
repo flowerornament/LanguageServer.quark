@@ -25,17 +25,10 @@
             },
             action: {
                 |prefixClass, trigger, completion, provideCompletionsFunc|
-                var firstMatch, lastMatch, matches, names;
-                var results, methodNames, methods, method;
-                
-                // Subtle: We simply return all methods for a class - the list should be
-                // short-ish and we can cache our response for future uses if needed.
-                #methodNames, methods = LSPDatabase.methodsForClass(prefixClass);
-                
-                Log('LanguageServer.quark').info("Found % method completions", methods.size);
+                var results = LSPDatabase.findClassMethods(prefixClass);
 
-                results = methods.collect(LSPDatabase.makeMethodCompletion(_, true));
-                
+                Log('LanguageServer.quark').info("Found % class method completions", results.size);
+
                 provideCompletionsFunc.value(results, false);
             }
         )

@@ -18,25 +18,11 @@
             },
             action: {
                 |prefixString, trigger, completion, provideCompletionsFunc|
-                var methodIndexRange, methods, results, isIncomplete, limit;
+                var result = LSPDatabase.findMethods(completion, LSPCompletionHandler.completionLimit);
 
-                methodIndexRange = LSPDatabase.matchMethods(completion);
-                limit = LSPCompletionHandler.completionLimit;
+                Log('LanguageServer.quark').info("Found % method completions", result[\items].size);
 
-                Log('LanguageServer.quark').info("Found % completions, returning %", methodIndexRange.size, min(limit, methodIndexRange.size));
-
-                isIncomplete = (methodIndexRange.size > limit);
-                methodIndexRange.size = min(limit, methodIndexRange.size);
-                
-                results = Array(methodIndexRange.size);
-                
-                methodIndexRange.collect {
-                    |index|
-                    var method = LSPDatabase.allMethods[index];
-                    results = results.add(LSPDatabase.makeMethodCompletion(method))
-                };
-                
-                provideCompletionsFunc.(results, isIncomplete)
+                provideCompletionsFunc.(result[\items], result[\isIncomplete])
             }
         )
     }
