@@ -10,7 +10,6 @@ SignatureHelpProvider : LSPProvider {
     
     init {
         |clientCapabilities|
-        SinOsc.ar()
     }
     
     options {
