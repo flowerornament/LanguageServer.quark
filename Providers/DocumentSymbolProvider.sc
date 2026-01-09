@@ -28,16 +28,7 @@ DocumentSymbolProvider : LSPProvider {
             ).postln;
         };
 
-        if (doc.isOpen.not or: { doc.string.isNil }) {
-            TextDocumentProvider.lastOpenByUri[uri] !? {
-                |cached|
-                doc.initFromLSP(
-                    cached["languageId"],
-                    cached["version"].asInteger,
-                    cached["text"]
-                ).isOpen_(true);
-            };
-        };
+        doc.rehydrateIfNeeded;
         
         if (uri.endsWith(".sc")) {
             Log('LanguageServer.quark').warning("DocumentSymbol: skipping .sc file");

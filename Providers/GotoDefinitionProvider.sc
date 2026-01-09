@@ -23,17 +23,7 @@ GotoDefinitionProvider : LSPProvider {
 
         startTime = Main.elapsedTime;
 
-        // If the doc isn't open yet, try to rehydrate from last didOpen cache.
-        if (doc.isOpen.not or: { doc.string.isNil }) {
-            TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
-                |cached|
-                doc.initFromLSP(
-                    cached["languageId"],
-                    cached["version"].asInteger,
-                    cached["text"]
-                ).isOpen_(true);
-            };
-        };
+        doc.rehydrateIfNeeded;
 
         wordAtCursor = LSPDatabase.getDocumentWordAt(
             doc,

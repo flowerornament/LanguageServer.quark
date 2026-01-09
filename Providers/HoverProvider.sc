@@ -23,17 +23,7 @@ HoverProvider : LSPProvider {
             ).postln;
         };
 
-        // Rehydrate if not open.
-        if (doc.isOpen.not or: { doc.string.isNil }) {
-            TextDocumentProvider.lastOpenByUri[params["textDocument"]["uri"]] !? {
-                |cached|
-                doc.initFromLSP(
-                    cached["languageId"],
-                    cached["version"].asInteger,
-                    cached["text"]
-                ).isOpen_(true);
-            };
-        };
+        doc.rehydrateIfNeeded;
 
         wordAtCursor = LSPDatabase.getDocumentWordAt(
             doc,

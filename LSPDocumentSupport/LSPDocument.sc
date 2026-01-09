@@ -195,15 +195,31 @@ LSPDocument : Document {
     initFromLSP {
         |inLanguageId, inVersion, inText|
         Log('LanguageServer.quark').info("Creating LSP document % lang=% version=% size=%", quuid, inLanguageId, inVersion, inText.size);
-        
+
         title = this.path !? { |p| PathName(p).fileNameWithoutExtension } ?? { "unknown" };
         isEdited = false;
-        
+
         languageId = inLanguageId;
         version = inVersion;
         string = inText;
-        
+
         this.changed(\string, this.string);
+    }
+
+    rehydrateIfNeeded {
+        // Restore document content from cache if not currently open.
+        // Used by providers that need document text for features like hover, goto, etc.
+        if (isOpen.not or: { string.isNil }) {
+            TextDocumentProvider.lastOpenByUri[quuid] !? {
+                |cached|
+                this.initFromLSP(
+                    cached["languageId"],
+                    cached["version"].asInteger,
+                    cached["text"]
+                ).isOpen_(true);
+            };
+        };
+        ^this
     }
     
     initFromDisk {
