@@ -9,7 +9,7 @@
             action: {
                 |prefixClass, trigger, completion, provideCompletionsFunc|
                 provideCompletionsFunc.value(
-                    LSPDatabase.findClasses(completion.stripWhiteSpace, 100),
+                    LSPDatabase.findClasses(completion.stripWhiteSpace, LSPCompletionHandler.completionLimit),
                     true
                 );
             }

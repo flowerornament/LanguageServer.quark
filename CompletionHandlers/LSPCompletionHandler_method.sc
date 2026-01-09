@@ -18,14 +18,15 @@
             },
             action: {
                 |prefixString, trigger, completion, provideCompletionsFunc|
-                var methodIndexRange, methods, results, isIncomplete;
+                var methodIndexRange, methods, results, isIncomplete, limit;
 
                 methodIndexRange = LSPDatabase.matchMethods(completion);
+                limit = LSPCompletionHandler.completionLimit;
 
-                Log('LanguageServer.quark').info("Found % completions, returning %", methodIndexRange.size, min(100, methodIndexRange.size));
+                Log('LanguageServer.quark').info("Found % completions, returning %", methodIndexRange.size, min(limit, methodIndexRange.size));
 
-                isIncomplete = (methodIndexRange.size > 100);
-                methodIndexRange.size = min(100, methodIndexRange.size);
+                isIncomplete = (methodIndexRange.size > limit);
+                methodIndexRange.size = min(limit, methodIndexRange.size);
                 
                 results = Array(methodIndexRange.size);
                 

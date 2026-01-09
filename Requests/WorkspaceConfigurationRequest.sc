@@ -18,6 +18,7 @@ WorkspaceConfiguration : LSPRequest {
             "sclang.evaluateResultPrefix",
             "sclang.postEvaluateResults",
             "sclang.improvedErrorReports",
+            "sclang.maxCompletions",
             "languageServerLogLevel"
         ];
         clientOptions = ();
@@ -43,7 +44,12 @@ WorkspaceConfiguration : LSPRequest {
                 |option, index|
                 clientOptions[sections[index].asSymbol] = option;
             };
-            
+
+            // Update completion limit if configured
+            clientOptions['sclang.maxCompletions'] !? { |v|
+                LSPCompletionHandler.completionLimit = v.asInteger.clip(10, 1000);
+            };
+
             server.changed(\clientOptions, clientOptions);
         }).onError({
             |e|

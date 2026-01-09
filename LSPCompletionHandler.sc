@@ -5,7 +5,7 @@
 
 LSPCompletionHandler {
     classvar <>completionHandlers;
-    classvar <completionLimit = 30;
+    classvar <>completionLimit = 100;
     
     var <>name, <>trigger, <>prefixHandler, <>action;
     
