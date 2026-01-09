@@ -1,7 +1,7 @@
 LSPConnection {
     classvar <connection;
     classvar <providers, <>preprocessor;
-    classvar readyMsg = "***LSP READY***";
+    classvar readyMsg = "*** LSP READY ***";
     classvar <handlerThread;
     classvar <rawRecvFunc;
     classvar errorCodes;
