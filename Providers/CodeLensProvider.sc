@@ -50,31 +50,12 @@ CodeLensProvider : LSPProvider {
         if (regions.respondsTo(\collect).not) { ^[] };
 
         ^regions.collect { |region|
-            var range, start, end, startLine, endLine, name, title;
-
-            range = region[\range];
+            var range = region[\range];
             if (range.isNil) { nil } {
-                start = range[\start];
-                end = range[\end];
-                startLine = if (start.notNil) { start[\line] ?? 0 } { 0 };
-                endLine = if (end.notNil) { end[\line] ?? startLine } { startLine };
-                name = region[\text];
-
-                title = if (startLine == endLine) {
-                    "SC: Evaluate Line"
-                } {
-                    // Check if name is meaningful (not auto-generated "[block N]")
-                    if (name.notNil and: { name.beginsWith("[block").not }) {
-                        "SC: Evaluate: " ++ name
-                    } {
-                        "SC: Evaluate Block"
-                    }
-                };
-
                 (
                     range: range,
                     command: (
-                        title: title,
+                        title: "SC: Evaluate (CodeLens)",
                         command: "supercollider.evaluateSelection",
                         arguments: [
                             params["textDocument"]["uri"],
