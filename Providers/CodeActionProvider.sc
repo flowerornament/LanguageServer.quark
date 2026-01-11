@@ -56,7 +56,7 @@ CodeActionProvider : LSPProvider {
 
         if (selectionEmpty.not) {
             actions = actions.add(
-                this.makeEvaluateAction("→ Evaluate Selection", uri, normalizedRange)
+                this.makeEvaluateAction("SC: Evaluate Selection", uri, normalizedRange)
             );
         };
 
@@ -67,7 +67,7 @@ CodeActionProvider : LSPProvider {
             end: (line: line, character: lineText.size)
         );
         actions = actions.add(
-            this.makeEvaluateAction("→ Evaluate Line", uri, lineRange)
+            this.makeEvaluateAction("SC: Evaluate Line", uri, lineRange)
         );
 
         regions = try {
@@ -106,22 +106,22 @@ CodeActionProvider : LSPProvider {
             };
             blockRange.isNil.not.if {
                 actions = actions.add(
-                    this.makeEvaluateAction("→ Evaluate Block", uri, blockRange)
+                    this.makeEvaluateAction("SC: Evaluate Block", uri, blockRange)
                 );
             }
         };
 
         actions = actions.add(
-            this.makeCommandAction("⏹ Hard Stop", "supercollider.internal.cmdPeriod")
+            this.makeCommandAction("SC: Hard Stop", "supercollider.internal.cmdPeriod")
         );
         actions = actions.add(
-            this.makeCommandAction("⏺ Boot Server", "supercollider.internal.bootServer")
+            this.makeCommandAction("SC: Boot Server", "supercollider.internal.bootServer")
         );
         actions = actions.add(
-            this.makeCommandAction("⏏ Quit Server", "supercollider.internal.quitServer")
+            this.makeCommandAction("SC: Quit Server", "supercollider.internal.quitServer")
         );
         actions = actions.add(
-            this.makeCommandAction("↻ Recompile", "supercollider.internal.recompile")
+            this.makeCommandAction("SC: Recompile", "supercollider.internal.recompile")
         );
 
         // Help actions for class under cursor
@@ -131,19 +131,19 @@ CodeActionProvider : LSPProvider {
             cls !? {
                 actions = actions.add(
                     this.makeEvalAction(
-                        "? Help: " ++ cls.name,
+                        "SC: Help: " ++ cls.name,
                         "LSPDatabase.openHelpFor(\"%\")".format(cls.name)
                     )
                 );
                 actions = actions.add(
                     this.makeEvalAction(
-                        "⌘ Help in Browser: " ++ cls.name,
+                        "SC: Help in Browser: " ++ cls.name,
                         "LSPDatabase.openHelpInBrowser(\"%\")".format(cls.name)
                     )
                 );
                 actions = actions.add(
                     this.makeEvalAction(
-                        "⌥ Help in Terminal: " ++ cls.name,
+                        "SC: Help in Terminal: " ++ cls.name,
                         "LSPDatabase.openHelpInTerminal(\"%\")".format(cls.name)
                     )
                 );

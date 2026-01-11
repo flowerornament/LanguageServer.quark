@@ -61,13 +61,13 @@ CodeLensProvider : LSPProvider {
                 name = region[\text];
 
                 title = if (startLine == endLine) {
-                    "→ Evaluate Line"
+                    "SC: Evaluate Line"
                 } {
                     // Check if name is meaningful (not auto-generated "[block N]")
                     if (name.notNil and: { name.beginsWith("[block").not }) {
-                        "→ Evaluate: " ++ name
+                        "SC: Evaluate: " ++ name
                     } {
-                        "→ Evaluate Block"
+                        "SC: Evaluate Block"
                     }
                 };
 
