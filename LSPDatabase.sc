@@ -414,7 +414,7 @@ LSPDatabase {
         }
     }
 
-    // Open help documentation for a class in Zed
+    // Open help documentation for a class in Zed window
     *openHelpFor { |className|
         var cls, schelpPath, markdown, outPath;
 
@@ -442,6 +442,58 @@ LSPDatabase {
 
         "Opened help for %".format(className).postln;
         ^outPath
+    }
+
+    // Open help documentation for a class in terminal (using glow)
+    *openHelpInTerminal { |className|
+        var cls, schelpPath, markdown, outPath, cmd;
+
+        cls = className.asSymbol.asClass;
+        if (cls.isNil) {
+            "Class not found: %".format(className).warn;
+            ^nil
+        };
+
+        schelpPath = this.findSchelpPath(cls);
+        if (schelpPath.isNil) {
+            "No help file for: %".format(className).warn;
+            ^nil
+        };
+
+        markdown = this.fetchSchelpMarkdown(schelpPath);
+        if (markdown.isNil) {
+            "Failed to convert help for: %".format(className).warn;
+            ^nil
+        };
+
+        outPath = "/tmp/" ++ className ++ ".md";
+        File.use(outPath, "w", { |f| f.write(markdown) });
+
+        // Open in terminal with glow if available, else less
+        cmd = "if command -v glow >/dev/null; then glow -p %; else less %; fi".format(
+            outPath.shellQuote, outPath.shellQuote
+        );
+        ("osascript -e 'tell app \"Terminal\" to do script \"%\"'".format(cmd)).unixCmd;
+
+        "Opened help in terminal for %".format(className).postln;
+        ^outPath
+    }
+
+    // Open help documentation for a class in browser
+    *openHelpInBrowser { |className|
+        var cls, url;
+
+        cls = className.asSymbol.asClass;
+        if (cls.isNil) {
+            "Class not found: %".format(className).warn;
+            ^nil
+        };
+
+        url = "https://docs.supercollider.online/Classes/" ++ cls.name.asString;
+        ("open" + url.shellQuote).unixCmd;
+
+        "Opened help in browser for %".format(className).postln;
+        ^url
     }
 
     // Returns a Location covering the first block comment in the class file.

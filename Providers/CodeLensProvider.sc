@@ -31,41 +31,13 @@ CodeLensProvider : LSPProvider {
         |method, params|
         var doc, regions;
 
-        // Debug logging - silently fail if directory doesn't exist
-        try {
-            File.use(
-                Platform.userAppSupportDir ++ "/Zed/sclang-debug.log",
-                "a",
-                { |file|
-                    file.write("codelens handleRequest %\n".format(params["textDocument"]["uri"]))
-                }
-            );
-        };
-
         doc = LSPDocument.findByQUuid(params["textDocument"]["uri"]);
-
         if (doc.isNil) { ^[] };
 
         if (doc.string.isNil) {
-            try {
-                doc.initFromDisk;
-            } { |error|
-                error.reportError;
-            };
+            try { doc.initFromDisk } { |error| };
         };
-
-        doc.string.isNil.if { ^[] };
-
-        // Debug logging - silently fail if directory doesn't exist
-        try {
-            File.use(
-                Platform.userAppSupportDir ++ "/Zed/sclang-debug.log",
-                "a",
-                { |file|
-                    file.write("codelens doc class=% size=%\n".format(doc.string.class, doc.string.size))
-                }
-            );
-        };
+        if (doc.string.isNil) { ^[] };
 
         regions = try {
             LSPDatabase.getDocumentRegions(doc)
@@ -75,37 +47,42 @@ CodeLensProvider : LSPProvider {
         };
 
         if (regions.isNil) { ^[] };
+        if (regions.respondsTo(\collect).not) { ^[] };
 
-        // Debug logging - silently fail if directory doesn't exist
-        try {
-            File.use(
-                Platform.userAppSupportDir ++ "/Zed/sclang-debug.log",
-                "a",
-                { |file|
-                    file.write("codelens regions class=%\n".format(regions.class))
-                }
-            );
-        };
+        ^regions.collect { |region|
+            var range, start, end, startLine, endLine, name, title;
 
-        if (regions.respondsTo(\collect).not) {
-            Log('LanguageServer.quark').error("CODELENS regions lacks collect; class=%", regions.class);
-            ^[]
-        };
+            range = region[\range];
+            if (range.isNil) { nil } {
+                start = range[\start];
+                end = range[\end];
+                startLine = if (start.notNil) { start[\line] ?? 0 } { 0 };
+                endLine = if (end.notNil) { end[\line] ?? startLine } { startLine };
+                name = region[\text];
 
-        ^regions.collect {
-            |region|
-            (
-                range: region[\range],
-                command: (
-                    title: "▶ EVALUATE ———————————————————————————————",
-                    command: "supercollider.evaluateSelection",
-                    name: region[\text],
-                    arguments: [
-                        params["textDocument"]["uri"],
-                        region[\range],
-                    ]
+                title = if (startLine == endLine) {
+                    "→ Evaluate Line"
+                } {
+                    // Check if name is meaningful (not auto-generated "[block N]")
+                    if (name.notNil and: { name.beginsWith("[block").not }) {
+                        "→ Evaluate: " ++ name
+                    } {
+                        "→ Evaluate Block"
+                    }
+                };
+
+                (
+                    range: range,
+                    command: (
+                        title: title,
+                        command: "supercollider.evaluateSelection",
+                        arguments: [
+                            params["textDocument"]["uri"],
+                            range,
+                        ]
+                    )
                 )
-            )
-        }.asArray
+            }
+        }.reject(_.isNil).asArray
     }
 }

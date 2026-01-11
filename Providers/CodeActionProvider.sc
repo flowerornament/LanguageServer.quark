@@ -56,7 +56,7 @@ CodeActionProvider : LSPProvider {
 
         if (selectionEmpty.not) {
             actions = actions.add(
-                this.makeEvaluateAction("SuperCollider: Evaluate Selection", uri, normalizedRange)
+                this.makeEvaluateAction("→ Evaluate Selection", uri, normalizedRange)
             );
         };
 
@@ -67,7 +67,7 @@ CodeActionProvider : LSPProvider {
             end: (line: line, character: lineText.size)
         );
         actions = actions.add(
-            this.makeEvaluateAction("SuperCollider: Evaluate Line", uri, lineRange)
+            this.makeEvaluateAction("→ Evaluate Line", uri, lineRange)
         );
 
         regions = try {
@@ -106,33 +106,45 @@ CodeActionProvider : LSPProvider {
             };
             blockRange.isNil.not.if {
                 actions = actions.add(
-                    this.makeEvaluateAction("SuperCollider: Evaluate Block", uri, blockRange)
+                    this.makeEvaluateAction("→ Evaluate Block", uri, blockRange)
                 );
             }
         };
 
         actions = actions.add(
-            this.makeCommandAction("SuperCollider: Hard Stop (CmdPeriod)", "supercollider.internal.cmdPeriod")
+            this.makeCommandAction("⏹ Hard Stop", "supercollider.internal.cmdPeriod")
         );
         actions = actions.add(
-            this.makeCommandAction("SuperCollider: Boot Server", "supercollider.internal.bootServer")
+            this.makeCommandAction("⏺ Boot Server", "supercollider.internal.bootServer")
         );
         actions = actions.add(
-            this.makeCommandAction("SuperCollider: Quit Server", "supercollider.internal.quitServer")
+            this.makeCommandAction("⏏ Quit Server", "supercollider.internal.quitServer")
         );
         actions = actions.add(
-            this.makeCommandAction("SuperCollider: Recompile Class Library", "supercollider.internal.recompile")
+            this.makeCommandAction("↻ Recompile", "supercollider.internal.recompile")
         );
 
-        // Help action for class under cursor
+        // Help actions for class under cursor
         wordAtCursor = LSPDatabase.getDocumentWordAt(doc, line, normalizedRange[\start][\character]);
         wordAtCursor !? {
             var cls = wordAtCursor.asSymbol.asClass;
             cls !? {
                 actions = actions.add(
                     this.makeEvalAction(
-                        "SuperCollider: Show Help for " ++ cls.name,
+                        "? Help: " ++ cls.name,
                         "LSPDatabase.openHelpFor(\"%\")".format(cls.name)
+                    )
+                );
+                actions = actions.add(
+                    this.makeEvalAction(
+                        "⌘ Help in Browser: " ++ cls.name,
+                        "LSPDatabase.openHelpInBrowser(\"%\")".format(cls.name)
+                    )
+                );
+                actions = actions.add(
+                    this.makeEvalAction(
+                        "⌥ Help in Terminal: " ++ cls.name,
+                        "LSPDatabase.openHelpInTerminal(\"%\")".format(cls.name)
                     )
                 );
             };
