@@ -13,7 +13,7 @@ LSPDatabase {
         methodLocations = ();
         classDocCache = ();
         classFileCache = ();
-        lookupCache = LRUCache.new(64);
+        lookupCache = LRUCache.new(128);
         lookupCount = 0;
     }
 
