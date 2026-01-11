@@ -389,7 +389,13 @@ LSPDatabase {
         try {
             pipe = Pipe.new(curlCmd, "r");
             response = pipe.getLine ?? "";
-            while { pipe.getLine !? { |line| response = response ++ line } ?? false } {};
+            while {
+                var line = pipe.getLine;
+                if (line.notNil) {
+                    response = response ++ line;
+                    true
+                } { false }
+            } {};
             pipe.close;
         } { |error|
             Log('LanguageServer.quark').warning("fetchSchelpMarkdown curl failed: %", error);
@@ -406,6 +412,36 @@ LSPDatabase {
             Log('LanguageServer.quark').warning("fetchSchelpMarkdown parse failed: % response=%", error, response);
             ^nil
         }
+    }
+
+    // Open help documentation for a class in Zed
+    *openHelpFor { |className|
+        var cls, schelpPath, markdown, outPath;
+
+        cls = className.asSymbol.asClass;
+        if (cls.isNil) {
+            "Class not found: %".format(className).warn;
+            ^nil
+        };
+
+        schelpPath = this.findSchelpPath(cls);
+        if (schelpPath.isNil) {
+            "No help file for: %".format(className).warn;
+            ^nil
+        };
+
+        markdown = this.fetchSchelpMarkdown(schelpPath);
+        if (markdown.isNil) {
+            "Failed to convert help for: %".format(className).warn;
+            ^nil
+        };
+
+        outPath = "/tmp/" ++ className ++ ".md";
+        File.use(outPath, "w", { |f| f.write(markdown) });
+        ("zed" + outPath.shellQuote).unixCmd;
+
+        "Opened help for %".format(className).postln;
+        ^outPath
     }
 
     // Returns a Location covering the first block comment in the class file.

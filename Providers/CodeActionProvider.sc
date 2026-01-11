@@ -70,17 +70,6 @@ CodeActionProvider : LSPProvider {
             this.makeEvaluateAction("SuperCollider: Evaluate Line", uri, lineRange)
         );
 
-        // Help action for class under cursor
-        wordAtCursor = LSPDatabase.getDocumentWordAt(doc, line, normalizedRange[\start][\character]);
-        wordAtCursor !? {
-            var cls = wordAtCursor.asSymbol.asClass;
-            cls !? {
-                actions = actions.add(
-                    this.makeHelpAction("SuperCollider: Show Help for " ++ cls.name, cls.name.asString)
-                );
-            };
-        };
-
         regions = try {
             LSPDatabase.getDocumentRegions(doc)
         } { |error|
@@ -135,6 +124,20 @@ CodeActionProvider : LSPProvider {
             this.makeCommandAction("SuperCollider: Recompile Class Library", "supercollider.internal.recompile")
         );
 
+        // Help action for class under cursor
+        wordAtCursor = LSPDatabase.getDocumentWordAt(doc, line, normalizedRange[\start][\character]);
+        wordAtCursor !? {
+            var cls = wordAtCursor.asSymbol.asClass;
+            cls !? {
+                actions = actions.add(
+                    this.makeEvalAction(
+                        "SuperCollider: Show Help for " ++ cls.name,
+                        "LSPDatabase.openHelpFor(\"%\")".format(cls.name)
+                    )
+                );
+            };
+        };
+
         Log('LanguageServer.quark').debug("Code actions for %:% — %", uri, normalizedRange, actions);
 
         ^actions
@@ -166,14 +169,14 @@ CodeActionProvider : LSPProvider {
         )
     }
 
-    makeHelpAction { |title, className|
+    makeEvalAction { |title, code|
         ^(
             title: title,
             kind: "source",
             command: (
                 title: title,
-                command: "supercollider.showHelp",
-                arguments: [className]
+                command: "supercollider.eval",
+                arguments: [code]
             )
         )
     }
