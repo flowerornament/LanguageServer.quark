@@ -39,35 +39,18 @@ HoverProvider : LSPProvider {
 
         ^(wordAtCursor !? {
             var cls = wordAtCursor.asSymbol.asClass;
-            var classDoc, schelpPath, schelpMarkdown;
+            var classDoc;
             var contents = [(
                 language: "supercollider",
                 value: wordAtCursor.asString
             )];
 
-            // Try to fetch schelp documentation via launcher
-            cls !? {
-                schelpPath = LSPDatabase.findSchelpPath(cls);
-                schelpPath !? {
-                    schelpMarkdown = LSPDatabase.fetchSchelpMarkdown(schelpPath);
-                };
-            };
-
-            // Prefer schelp markdown, fallback to /* */ comment
-            if (schelpMarkdown.notNil) {
+            classDoc = cls !? { LSPDatabase.getClassDocumentation(cls) };
+            classDoc !? {
                 contents = contents.add((
                     language: "markdown",
-                    value: schelpMarkdown
+                    value: classDoc
                 ));
-            } {
-                // Fallback to /* */ comment from class file
-                classDoc = cls !? { LSPDatabase.getClassDocumentation(cls) };
-                classDoc !? {
-                    contents = contents.add((
-                        language: "markdown",
-                        value: classDoc
-                    ));
-                };
             };
 
             (contents: contents)

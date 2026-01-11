@@ -111,6 +111,29 @@ ExecuteCommandProvider : LSPProvider {
                         EvaluateProvider.evaluateSource(doc, source)
                     }
                 }
+            },
+            'supercollider.showHelp': { |className|
+                var cls, schelpPath, markdown, outPath, result;
+                cls = className.asSymbol.asClass;
+                if (cls.isNil) {
+                    result = (error: "Class not found: " ++ className);
+                } {
+                    schelpPath = LSPDatabase.findSchelpPath(cls);
+                    if (schelpPath.isNil) {
+                        result = (error: "No help file for: " ++ className);
+                    } {
+                        markdown = LSPDatabase.fetchSchelpMarkdown(schelpPath);
+                        if (markdown.isNil) {
+                            result = (error: "Failed to convert help for: " ++ className);
+                        } {
+                            outPath = "/tmp/" ++ className ++ ".md";
+                            File.use(outPath, "w", { |f| f.write(markdown) });
+                            ("zed" + outPath.shellQuote).unixCmd;
+                            result = (result: "Opened help for " ++ className);
+                        };
+                    };
+                };
+                result
             }
         )
     }

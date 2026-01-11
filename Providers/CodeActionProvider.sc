@@ -30,7 +30,7 @@ CodeActionProvider : LSPProvider {
 
     handleRequest {
         |method, params|
-        var doc, uri, range, normalizedRange, selectionEmpty, actions, line, lineText, lineRange;
+        var doc, uri, range, normalizedRange, selectionEmpty, actions, line, lineText, lineRange, wordAtCursor;
         var regions, blockRegion, blockRange;
 
         uri = params["textDocument"]["uri"];
@@ -69,6 +69,17 @@ CodeActionProvider : LSPProvider {
         actions = actions.add(
             this.makeEvaluateAction("SuperCollider: Evaluate Line", uri, lineRange)
         );
+
+        // Help action for class under cursor
+        wordAtCursor = LSPDatabase.getDocumentWordAt(doc, line, normalizedRange[\start][\character]);
+        wordAtCursor !? {
+            var cls = wordAtCursor.asSymbol.asClass;
+            cls !? {
+                actions = actions.add(
+                    this.makeHelpAction("SuperCollider: Show Help for " ++ cls.name, cls.name.asString)
+                );
+            };
+        };
 
         regions = try {
             LSPDatabase.getDocumentRegions(doc)
@@ -151,6 +162,18 @@ CodeActionProvider : LSPProvider {
                 title: title,
                 command: commandId,
                 arguments: []
+            )
+        )
+    }
+
+    makeHelpAction { |title, className|
+        ^(
+            title: title,
+            kind: "source",
+            command: (
+                title: title,
+                command: "supercollider.showHelp",
+                arguments: [className]
             )
         )
     }
