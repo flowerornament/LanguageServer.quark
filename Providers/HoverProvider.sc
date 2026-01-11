@@ -37,23 +37,37 @@ HoverProvider : LSPProvider {
             ).postln;
         };
 
-        // Try to show a short doc comment from the class file if available.
-        classDoc = wordAtCursor !? {
-            var cls = wordAtCursor.asSymbol.asClass;
-            cls !? { LSPDatabase.getClassDocumentation(cls) }
-        };
-
         ^(wordAtCursor !? {
+            var cls = wordAtCursor.asSymbol.asClass;
+            var classDoc, schelpPath, schelpMarkdown;
             var contents = [(
                 language: "supercollider",
                 value: wordAtCursor.asString
             )];
 
-            classDoc !? {
+            // Try to fetch schelp documentation via launcher
+            cls !? {
+                schelpPath = LSPDatabase.findSchelpPath(cls);
+                schelpPath !? {
+                    schelpMarkdown = LSPDatabase.fetchSchelpMarkdown(schelpPath);
+                };
+            };
+
+            // Prefer schelp markdown, fallback to /* */ comment
+            if (schelpMarkdown.notNil) {
                 contents = contents.add((
                     language: "markdown",
-                    value: classDoc
+                    value: schelpMarkdown
                 ));
+            } {
+                // Fallback to /* */ comment from class file
+                classDoc = cls !? { LSPDatabase.getClassDocumentation(cls) };
+                classDoc !? {
+                    contents = contents.add((
+                        language: "markdown",
+                        value: classDoc
+                    ));
+                };
             };
 
             (contents: contents)

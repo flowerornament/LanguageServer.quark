@@ -348,6 +348,66 @@ LSPDatabase {
         ^docString
     }
 
+    // Find the .schelp file path for a class.
+    // Returns nil if not found.
+    *findSchelpPath {
+        |class|
+        var helpDir, path;
+
+        // Handle symbol/string input
+        if (class.isKindOf(Class).not) {
+            class = class.asSymbol.asClass;
+        };
+
+        if (class.isNil) { ^nil };
+
+        // SuperCollider help is at:
+        // /Applications/SuperCollider.app/Contents/Resources/HelpSource/Classes/{ClassName}.schelp
+        helpDir = Platform.resourceDir +/+ "HelpSource/Classes";
+        path = helpDir +/+ class.name.asString ++ ".schelp";
+
+        if (File.exists(path)) { ^path };
+        ^nil
+    }
+
+    // Fetch markdown from launcher's /convert-schelp endpoint.
+    // Uses curl to make HTTP request. Returns nil on error.
+    *fetchSchelpMarkdown {
+        |schelpPath, launcherPort=57130|
+        var url, curlCmd, pipe, response, json;
+
+        url = "http://127.0.0.1:%/convert-schelp".format(launcherPort);
+
+        // Escape path for JSON
+        schelpPath = schelpPath.replace("\"", "\\\"");
+
+        curlCmd = "curl -s -X POST % -H 'Content-Type: application/json' -d '{\"path\": \"%\"}'".format(
+            url.shellQuote,
+            schelpPath
+        );
+
+        try {
+            pipe = Pipe.new(curlCmd, "r");
+            response = pipe.getLine ?? "";
+            while { pipe.getLine !? { |line| response = response ++ line } ?? false } {};
+            pipe.close;
+        } { |error|
+            Log('LanguageServer.quark').warning("fetchSchelpMarkdown curl failed: %", error);
+            ^nil
+        };
+
+        if (response.isEmpty) { ^nil };
+
+        // Parse JSON response
+        try {
+            json = response.parseJSON;
+            ^json["markdown"]
+        } { |error|
+            Log('LanguageServer.quark').warning("fetchSchelpMarkdown parse failed: % response=%", error, response);
+            ^nil
+        }
+    }
+
     // Returns a Location covering the first block comment in the class file.
     *getClassDocRange {
         |class|
