@@ -151,7 +151,6 @@ CodeActionProvider : LSPProvider {
         };
 
         Log('LanguageServer.quark').debug("Code actions for %:% — %", uri, normalizedRange, actions);
-
         ^actions
     }
 

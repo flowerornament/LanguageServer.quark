@@ -9,9 +9,14 @@ DocumentationSearchProvider : LSPProvider {
     
     init {
         |clientCapabilities|
-        try {
-            SCDoc.indexAllDocuments
-        } {}
+        // Defer SCDoc indexing so it doesn't block provider registration.
+        // Early codeAction requests were arriving before providers finished
+        // registering because indexAllDocuments blocks for ~0.5 seconds.
+        {
+            try {
+                SCDoc.indexAllDocuments
+            } {}
+        }.defer(0.001)
     }
     
     options {
